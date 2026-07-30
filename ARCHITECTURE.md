@@ -14,7 +14,7 @@ CipherPhi is an onchain zakat platform on Stellar. Donors calculate and pay thei
 
 ## What We Are Building
 
-CipherPhi moves an operating, audited Swiss zakat foundation onchain. The religious rules of zakat, pooled custody, allocation across the eight Quranic categories, and distribution only to eligible recipients, are encoded in a single Soroban smart contract on Stellar. Stellar is the settlement layer, the custody layer for regulated stablecoins, and the immutable proof layer. The one thing a normal donation app cannot offer, cryptographic proof that a specific donation reached a verified recipient, is exactly what the Stellar ledger provides.
+CipherPhi moves an operating, audited Swiss zakat foundation onchain. The rules of zakat, pooled custody, allocation across the eight categories, and distribution only to eligible recipients, are encoded in a single Soroban smart contract on Stellar. Stellar is the settlement layer, the custody layer for regulated stablecoins, and the immutable proof layer. The one thing a normal donation app cannot offer, cryptographic proof that a specific donation reached a verified recipient, is exactly what the Stellar ledger provides.
 
 **But why Stellar?** Zakat is a payments problem: pooled stablecoin custody, low-cost final settlement, and eventual fiat-out to recipients. Stellar is purpose-built for stablecoin payments, gives sub-second finality for cents, natively supports USDC and EURC through the Stellar Asset Contract, and provides an immutable ledger that turns "trust us" into an auditable trail. Soroban adds the programmable layer to encode the zakat rules as enforced code rather than policy.
 
