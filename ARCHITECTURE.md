@@ -1,8 +1,12 @@
 # CipherPhi architecture
 
+**The full technical proposal and delivery plan, including the schedule and budget this file omits, is in [CipherPhi_Technical_Proposal_and_Delivery_Plan.pdf](./CipherPhi_Technical_Proposal_and_Delivery_Plan.pdf).**
+
 CipherPhi moves an operating, audited Swiss zakat foundation onchain. The rules of zakat, pooled custody, allocation across the eight zakat categories, and distribution only to eligible recipients, are encoded in three Soroban smart contracts on Stellar.
 
 This file is the architecture: what is built, why each decision was settled the way it was, and what is deliberately not being built. Where something a reader might expect is absent, it is named under "Not in this build" with the trigger that would change it.
+
+*Revision 2. Incorporates the findings of an independent pre-implementation security review. The delivery plan, deliverables, and budget are unchanged.*
 
 ---
 
@@ -30,10 +34,9 @@ Four pillars, all of them already in the protocol rather than built for this pro
 
 Soroban then supplies the part a payment network alone cannot do: the eight-category allocation and the eligibility gate run as enforced code rather than as application logic sitting above the rails.
 
-  
+## Architecture
 
-# Architecture
-*Three Soroban contracts, three separated keys, and a ledger that carries no personal data.*
+*3 Soroban contracts, and 3 separated keys. The ledger carries no personal data.*
 
 ## The boundary
 
@@ -72,7 +75,7 @@ Custody, policy, and eligibility are separate deployments from the first day, no
 
 **Upgrade becomes granular instead of total.** Refining the amil cap redeploys `policy`. Changing the attestation scheme redeploys `attestation`. Neither touches custody, so donor funds never migrate for a reason unrelated to custody. A single contract would have forced the opposite: every change to a Shariah parameter redeploying the thing holding the money.
 
-**The cost is a trust boundary, and it is paid explicitly.** A cross-contract call is a place where a wrong answer can enter. `zakat_pool` pins the addresses of `policy` and `attestation` in governance-controlled storage, and treats both as untrusted inputs rather than trusted collaborators: an allocation is rejected unless the returned category amounts sum exactly to the amount received, and a distribution is rejected unless the attestation verifies against the authority the pool itself holds. The audit scope is three Wasm binaries rather than one, which is a real cost and is the reason independent review is entered well before mainnet rather than alongside it.
+**The cost is a trust boundary, and it is paid explicitly.** A cross-contract call is a place where a wrong answer can enter. `zakat_pool` pins the addresses of `policy` and `attestation` in governance-controlled storage, and treats both as untrusted inputs rather than trusted collaborators: an allocation is rejected unless the returned vector has exactly eight elements, every element is zero or positive, and they sum exactly to the amount received. Checking only the sum would not be enough: a split of the shape `[amount + x, -x, 0, ...]` sums correctly, passes checked arithmetic, and leaves total custody intact while silently crediting one category from another's beneficiaries. A distribution is likewise rejected unless the attestation verifies against the authority the pool itself holds. The audit scope is three Wasm binaries rather than one, which is a real cost and is the reason independent review is entered well before mainnet rather than alongside it.
 
 > **Not in this build.** No in-place code upgrade on custody. Soroban contracts are mutable only if they compile in an upgrade entry point; a contract that omits `update_current_contract_wasm` is immutable by construction.[^7] `zakat_pool` omits it, because code that can be silently replaced over donor funds is an admin key by another name. `policy` and `attestation` are repointable by governance instead, and they hold nothing. A change to custody is a new deployment with a published address and a migration a donor can watch.
 
@@ -82,26 +85,31 @@ Custody, policy, and eligibility are separate deployments from the first day, no
 
 Storage is bounded by design, and the bound is the point.
 
-Every Soroban entry carries a time to live, and a persistent entry whose TTL lapses is moved to an archive and must be restored before it can be read again.[^8] Storage types differ in cost, in how many keys a contract may hold, and in what happens at expiry.[^9] An architecture that writes one record per contribution therefore has a ceiling it will meet without warning, and meets it at exactly the moment the platform is working.
+Every Soroban entry carries a time to live. Since Protocol 23, a persistent entry whose TTL lapses is evicted to the archive and restored automatically when it next appears in a transaction footprint, with the rent and write fees of that restoration paid by whoever sends the transaction.[^8] A temporary entry is different in kind: at expiry it is deleted permanently, with no restoration path.[^9] The failure mode of unbounded per-contribution storage is therefore not a contract that stops working but one that grows steadily more expensive to touch, with restoration costs landing on donor transactions at exactly the moment the platform is succeeding.
 
-| Contract | Entry | Content |
-| --- | --- | --- |
-| `zakat_pool` | `governance` | Multisig address. Configuration and deployment authority |
-| `zakat_pool` | `distributor` | The key permitted to move funds out of the pool |
-| `zakat_pool` | `policy_addr` | Address of the policy contract, governance-controlled |
-| `zakat_pool` | `attest_addr` | Address of the attestation contract, governance-controlled |
-| `zakat_pool` | `approved_assets` | SAC addresses for USDC, and later EURC |
-| `zakat_pool` | `category_balances` | Eight buckets per approved asset. The whole of the accounting state |
-| `zakat_pool` | `distribution_seq` | Monotonic counter, bound into every attestation so a signature executes once |
-| `zakat_pool` | `paused` | Contribution pause flag, governance-controlled |
-| `zakat_pool` | `pending_change` | A queued governance change: what it targets, its new value, and the ledger after which it may execute |
-| `policy` | `allocation` | The eight-category split, extendable to a per-partner split |
-| `policy` | `parameters` | Nisab basis, amil cap, discharge timing |
-| `attestation` | `authority` | Public key set that signs recipient eligibility. Signers, not fund-movers |
-
-That is the complete persistent set across all three contracts. It grows only when governance approves an additional asset, which adds eight buckets. Nothing here grows with donor count, contribution count, or recipient count. A TTL-bump strategy runs on every entry above, so nothing load-bearing is archived through disuse.
+| Contract | Entry | Durability | Content |
+| --- | --- | --- | --- |
+| `zakat_pool` | `governance` | Instance | Multisig address. Configuration and deployment authority |
+| `zakat_pool` | `distributor` | Instance | The key permitted to move funds out of the pool |
+| `zakat_pool` | `policy_addr` | Instance | Address of the policy contract, governance-controlled |
+| `zakat_pool` | `attest_addr` | Instance | Address of the attestation contract, governance-controlled |
+| `zakat_pool` | `approved_assets` | Instance | SAC addresses for USDC, and later EURC |
+| `zakat_pool` | `category_balances` | Persistent, keyed by asset | Eight buckets per approved asset. The whole of the accounting state |
+| `zakat_pool` | `distribution_seq` | Instance | Monotonic counter, bound into every attestation so a signature executes once |
+| `zakat_pool` | `paused` | Instance | Contribution pause flag, governance-controlled, effective immediately |
+| `zakat_pool` | `distributor_disabled` | Instance | Distributor kill switch, governance-controlled, effective immediately |
+| `zakat_pool` | `pending_change` | Instance | A queued governance change: what it targets, its new value, and the ledger after which it may execute |
+| `policy` | `allocation` | Instance | The eight-category split, extendable to a per-partner split |
+| `policy` | `parameters` | Instance | Nisab basis, amil cap, discharge timing |
+| `attestation` | `authority` | Instance | Public key set that signs recipient eligibility, and the threshold. Set at construction and immutable: there is no setter |
 
   
+
+### Storage, continued
+
+That is the complete stored set across all three contracts. It grows only when governance approves an additional asset, which adds eight buckets. Nothing here grows with donor count, contribution count, or recipient count. **Durability is a decision, not a default.** Configuration sits in instance storage, which shares one lifetime with the contract itself, so a single extension covers all of it. Only the per-asset balances are keyed separately, because they are the one thing that grows when an asset is approved. Nothing uses temporary storage, which is deleted rather than archived at expiry: a queued governance change that vanished because its entry expired mid-timelock would be a silent failure of the delay itself.
+
+A TTL-bump strategy runs on every entry above, so nothing load-bearing is ever archived through disuse and no donor transaction pays surprise restoration fees.
 
 ## Event emission
 
@@ -126,25 +134,27 @@ Each contribution emits one event carrying the donor address, the asset, the amo
 
 Two functions on `zakat_pool` move value. Everything else across the three contracts is configuration, and these two are what the audit is really about.
 
-`contribute(asset, amount)`
+`contribute(donor, asset, amount)`
 
-1. Reject unless `asset` is in `approved_assets`
-2. Pull the asset from the donor via the Stellar Asset Contract
-3. Call `policy` for the eight-category split, and reject unless the returned amounts sum exactly to the amount received
-4. Increment the category buckets with checked `i128` arithmetic
-5. Emit a Contribution event carrying donor address, asset, amount, and the resulting split
+1. `require_auth` on the donor, and reject unless `amount` is positive
+2. Reject unless `asset` is in `approved_assets`
+3. Pull the asset from the donor via the Stellar Asset Contract, which authorises the transfer against the donor's own signature. No allowance or `transfer_from` path exists: a third party cannot move a donor's funds into a pool that has no refund path
+4. Call `policy` for the split, and reject unless it returns exactly eight amounts, each of them zero or positive, summing exactly to the amount received
+5. Increment the category buckets with checked `i128` arithmetic
+6. Emit a Contribution event carrying donor address, asset, amount, and the resulting split
 
 **No authorisation gate.** Anyone may contribute. Gating contributions would require an onchain allowlist of donors, which means donor identity onchain, which the boundary forbids.
 
 `distribute(recipient, asset, amount, category, attestation)`
 
-1. `require_auth` on the distributor key
-2. Call `attestation` to verify the signature, which binds recipient, asset, category, amount, and the pool's distribution sequence
-3. Check the category bucket holds `amount`
-4. Decrement the bucket, then transfer, in that order
-5. Emit a Disbursement event carrying the recipient address, the category, and the attestation hash
+1. `require_auth` on the distributor key, and reject if the distributor is disabled
+2. Reject unless `amount` is positive, `asset` is in `approved_assets`, and the recipient is not the pool itself
+3. Call `attestation` to verify the signature, which binds recipient, asset, category, amount, and the pool's distribution sequence
+4. Check the category bucket holds `amount`
+5. Decrement the bucket, then transfer, in that order
+6. Emit a Disbursement event carrying the recipient address, the category, and the attestation hash
 
-**Ordering.** Step 4 is checks-effects-interactions. Soroban's execution model does not permit reentrancy, so this ordering is a backstop rather than the primary control. It is written this way regardless, because a contract whose safety depends on a platform guarantee reads as safe for the wrong reason, and because the pattern survives a future platform change that the assumption would not.
+**Ordering.** Step 5 is checks-effects-interactions. Soroban's host rejects re-entering any contract already on the call stack, so this ordering is a backstop rather than the primary control. It is written this way regardless, because a contract whose safety depends on a platform guarantee reads as safe for the wrong reason, and because the pattern survives a future platform change that the assumption would not.
 
 **Binding.** Step 2 is what makes this different from a multisig treasury. The money-mover cannot invent a recipient. The eligibility-signer cannot move money. What the signature covers is set out under replay on the security page.
 
@@ -152,7 +162,7 @@ Two functions on `zakat_pool` move value. Everything else across the three contr
 
 | Role | Holds | Can | Cannot |
 | --- | --- | --- | --- |
-| Governance | 3-of-5 multisig | Set policy, approve assets, deploy, pause contributions, repoint `policy` and `attestation` under timelock | Move funds. Sign eligibility |
+| Governance | 3-of-5 multisig | Deploy, pause contributions, disable the distributor, repoint `policy` and `attestation` and change parameters under timelock | Move funds. Sign eligibility |
 | Distributor | Single operational key | Call `distribute` | Change policy. Create a valid attestation |
 | Attestation authority | 2-of-3 multisig | Sign recipient eligibility off-chain | Move funds. Change policy |
 
@@ -170,7 +180,13 @@ The separation is the control, and the design assumes one key will eventually be
 
 The Shariah authority holds a seat because eligibility is partly a category question, whether a recipient falls inside one of the eight, which is the same judgment the parameter gate already covers.
 
-**The honest limit.** What remains is collusion between the Foundation and the delivery team, through governance repointing `attestation` to a permissive contract. That is the floor rather than an oversight: two organisations, two key sets, and no way to reduce it further without a third party holding neither. Three things constrain it, all onchain. Repointing `attestation` or `policy`, and rotating the `distributor`, are each subject to a seven-day timelock that emits an event at proposal and at execution, so the change is visible before it takes effect rather than after. Approving an asset sits under the same delay; pausing contributions does not, because a brake that takes a week is not a brake. Governance can cancel a queued change, and the cancellation emits too. And the pilot runs with capped amounts, so the window between a visible proposal and a possible loss is bounded by design. Holder identities and custody method are published with the mainnet deployment.
+**Rotation is repointing.** The attestation contract has no setter for its key set: `authority` is fixed at construction. Changing the quorum means deploying a new attestation contract and repointing the pool at it, which puts key rotation under the same delay and the same events as every other governance change. The alternative, an in-place setter, would have been an instant path to a quorum of governance's choosing, defeating the delay it sits beside. This also removes a setter from the audit surface, and it means the mainnet attestation contract is constructed with the final 2-of-3 set rather than migrating into it.
+
+**What sits behind the seven-day timelock:** repointing `policy` or `attestation`, approving an asset, and changing any Shariah parameter. Each emits an event at proposal and at execution, so the change is visible before it takes effect rather than after, and governance can cancel a queued change, which also emits. Two things are deliberately instant: pausing contributions, because a brake that takes a week is not a brake, and disabling the distributor, for the same reason. A compromised operational key must be evictable in minutes, and a disabled distributor still cannot move funds without an attestation, so instant revocation costs nothing the delay was protecting.
+
+**The honest limit.** What remains is collusion between the Foundation and the delivery team, through governance repointing `attestation` to a permissive contract. That is the floor rather than an oversight: two organisations, two key sets, and no way to reduce it further without a third party holding neither. Two things constrain it beyond the delay itself. The pilot runs with capped amounts, bounding the window between a visible proposal and a possible loss. And the delay is only worth its cost if someone is watching: a named party monitors the proposal, execution and cancellation events with an off-chain escalation path, because a timelock nobody observes is a delay rather than a control.
+
+**One invariant governs the governance seats**, and it is the invariant rather than the roster that makes the paragraph above true: delivery-team seats must remain below the governance quorum threshold. Otherwise the floor is one organisation plus a seven-day wait rather than two organisations. Holder identities, seat allocation, and custody method are published with the mainnet deployment; the invariant is a design constraint from today.
 
 *No single key completes a distribution. The party that decides who is eligible and the party that sends the money are different parties, holding different keys.*
 
@@ -188,7 +204,7 @@ Every Stellar asset has a contract address reserved for it, and the Stellar Asse
 
 **The addresses are fixed before the pool is deployed, not chosen by it.** A Stellar Asset Contract address is derived deterministically from the asset and the network passphrase, so the USDC entry in `approved_assets` is a known constant on testnet and a different known constant on mainnet. Both are taken from Circle's published references rather than from a lookup at runtime, and both are written into the repository next to the deployment that uses them.[^13]
 
-> **Inbound from other chains is Circle's problem, not the pool's.** Circle's CCTP moves native USDC onto Stellar from more than twenty other chains by burning at the source and minting at the destination, with no wrapped asset and no third-party bridge.[^4] A donor holding USDC elsewhere arrives on Stellar with real USDC, and the pool sees an ordinary SAC transfer. That is why there is no custom token contract, no wrapping, and no bridging logic anywhere inside the pool: the cross-chain path terminates before it reaches CipherPhi's code.
+> **Inbound from other chains is Circle's problem, not the pool's.** Circle's CCTP is live on Stellar and moves native USDC in from other chains by burning at the source and minting at the destination, with no wrapped asset and no third-party bridge.[^4] A donor holding USDC elsewhere arrives on Stellar with real USDC, and the pool sees an ordinary SAC transfer. That is why there is no custom token contract, no wrapping, and no bridging logic anywhere inside the pool: the cross-chain path terminates before it reaches CipherPhi's code.
 
   
 
@@ -201,6 +217,8 @@ The pilot disburses directly from `zakat_pool` to a vetted partner-organisation 
   Eligibility   Recipient address   Authority signature   zakat_pool
 ```
 *The recipient of a pilot distribution is an organisation the Foundation has already vetted through its existing eligibility framework. The attestation signs that organisation's address and its category.*
+
+**The recipient address is verified before it is used.** A Stellar account can only receive an asset it holds a trustline for, so a distribution to a partner organisation that has not established one fails rather than arriving. The transfer is atomic, so a failure consumes nothing and strands no attestation, but confirming the trustline is part of confirming the address rather than something discovered on the first real distribution.
 
 **This is a deliberately narrow scope for a first mainnet distribution, because every additional component** between the pool and the recipient is a component that must be live, correct, and audited before a single real zakat payment can be made. Distribution to a partner organisation removes all of them. The organisation then reaches individual beneficiaries through the process it already runs, under annual audit, which is a process with a track record rather than a system built for this grant.
 
@@ -302,7 +320,7 @@ Every control below maps to a named category in the OWASP Smart Contract Top 10 
 
 **Business logic, the solvency invariant.** After every state change, the sum of the eight category balances must not exceed the pool's actual token balance, asserted inside `contribute` and `distribute` rather than off-chain. Buckets change only through `contribute`, so a direct token transfer to the contract address cannot corrupt the accounting; it can only leave a surplus that is visible and, in this build, unspendable. There is no recovery path and therefore no third function that moves value: `contribute` and `distribute` remain the only two.
 
-**Reentrancy and unchecked external calls, GMX V1 lost USD 42 million to reentrancy in 2025.** Soroban's execution model does not permit reentrancy, and the contract is written checks-effects-interactions regardless, so the property is a backstop rather than the control. SAC transfer results are checked, never assumed, since a failed transfer treated as success is a silent accounting error.
+**Reentrancy and unchecked external calls, GMX V1 lost USD 42 million to reentrancy in 2025.** The control here is structural: neither `policy` nor `attestation` holds any address that lets it call back into the pool, the pool treats their return values as untrusted input, and every fund-moving path is written checks-effects-interactions. Soroban's host additionally rejects re-entering any contract already on the call stack, and that platform rule is treated as a backstop rather than as the control. SAC transfer results are checked, never assumed, since a failed transfer treated as success is a silent accounting error.
 
 **Replay, closed with single-use attestations.** The signed payload binds recipient, asset, category, amount, the pool's distribution sequence, the pool's contract address, and the network passphrase. Sequence binding means a valid signature executes exactly once, with no growing list of used signatures to store, and each attestation also carries a ledger after which it expires unused. Two consequences worth stating rather than discovering: attestations execute in the order they were signed, so one abandoned at sequence N strands those signed after it until they are reissued, and an attestation that is never executed stops being live at its expiry rather than remaining valid indefinitely. At pilot cadence, a handful of distributions to one partner organisation, serial execution is the behaviour you want. At scale it is a constraint on throughput and is named here as one. Asset binding means a signature authorising an amount in USDC cannot be presented once EURC is approved. Address and passphrase binding mean a signature is useless against a different deployment or on testnet.
 
@@ -310,7 +328,7 @@ Every control below maps to a named category in the OWASP Smart Contract Top 10 
 
 ### Controls, continued
 
-**Cross-contract trust boundaries.** `zakat_pool` pins the addresses of `policy` and `attestation` in governance-controlled storage and treats both as untrusted: an allocation is rejected unless the returned amounts sum exactly to the amount received, a distribution unless the attestation verifies. Neither callee can call back into the pool, so no defect in either can move funds.
+**Cross-contract trust boundaries.** `zakat_pool` pins the addresses of `policy` and `attestation` in governance-controlled storage and treats both as untrusted. An allocation is rejected unless the returned vector is exactly eight elements, each zero or positive, summing exactly to the amount received; a sum-only check would admit a split with a negative element that corrupts the category accounting while leaving total custody correct. A distribution is rejected unless the attestation verifies. Neither callee can call back into the pool, so no defect in either can move funds.
 
 **Pause, without reintroducing mutable code.** Governance can halt `contribute`. It cannot halt `distribute`, alter balances, or move funds, and it still cannot replace the custody Wasm. Immutable code and an emergency stop are separable properties, and only one of them should be given up: if a defect surfaces after launch, the pool must stop taking new contributions while remediation runs, rather than filling up because the only alternative was an upgrade key.
 
@@ -323,6 +341,10 @@ Independent security review is requested through the SCF Soroban Audit Bank, whi
 **Audit findings remediation.** The programme's rules put a twenty business day window on resolving critical, high and medium findings, and publish the final report once resolution is verified.[^19] The delivery plan leaves at least that much room between entering review and the mainnet deployment, which is why review is entered early rather than late.
 
 **Fuzzing.** `cargo-fuzz` runs on the fund-moving paths, targeting `contribute` and `distribute` specifically, since those are the two functions where a malformed input becomes a balance error. Fuzzing is first-class in the Stellar toolchain: the SDK ships `arbitrary` support for contract types, and the official guide covers cargo-fuzz, property tests, and mutation testing.[^20]
+
+**Deployment preconditions, checked onchain before the pool holds anything.** All three contracts initialise through `__constructor` with their configuration passed at deploy, so no separately callable initialiser exists in any binary and there is no window in which an uninitialised contract can be captured. The multisig properties are account configuration rather than contract code, and a contract cannot see them, so they are verified rather than assumed: the governance account carries five signers and a medium threshold of three with the master key weighted zero, and the attestation authority carries three signers and a threshold of two on the same basis. A default-configured Stellar account authorises on a single signature regardless of how many signers it lists, which would make every multisig claim in this document quietly false. Both accounts are read from the ledger and asserted before the first contribution.
+
+**Toolchain, pinned.** The artifact under review is built with `stellar contract build` on Rust 1.84 or newer for the `wasm32v1-none` target, the only Wasm target the Soroban runtime supports, against the soroban-sdk 27 line, matching Protocol 27 on mainnet.[^21] The SDK's major version tracks the protocol version, so the pin follows the network rather than a release calendar. The SDK's own guidance is that contracts are not built with a bare `cargo build`, and the SEP-58 pipeline reproduces the deployed Wasm hash from the same pinned inputs. The exact versions live in the repository, in `rust-toolchain.toml` and `Cargo.lock`, so an auditor reads the pins from the source of truth and this document commits to their being pinned rather than floating. Stellar has been upgrading protocols roughly every two months, and this build will very likely deploy onto a network one version ahead of the SDK it was audited against, which the SDK supports. The pin is therefore reviewed twice, on entering security review and again before mainnet deployment, and the signing tooling tracks the current authorisation credential format rather than the one that was current at design time.
 
 The audit report is published with the mainnet deployment, and every finding is either fixed or accepted with written reasoning. A reviewer can read both.
 
@@ -350,7 +372,8 @@ Each line is a decision with a stated trigger, rather than something nobody cons
 | **Native mobile applications** | The donor path is a responsive web application. Privy removes the wallet-app dependency that would otherwise force native |
 | **Multi-chain deployment** | Stellar is the settlement layer, not one of several. Deploying elsewhere would fragment the pool, which defeats pooled zakat |
 | **Surplus recovery** | A direct transfer to the pool address leaves a visible, unspendable surplus. A recovery path is a third value-moving function, which the audit scope does not need at pilot size. Revisit if a surplus large enough to matter accumulates |
-| **Commodity-backed assets** | Nisab is measured as a weight of gold, but a threshold test for whether zakat is owed does not imply payment in the same asset. A pool holding gold would pass price movement between the obligation and its delivery, and would hand recipients an asset they must sell before they can spend it. No credible gold token is natively issued on Stellar in any case. Revisit if one appears: per-asset accounting already accommodates it as a governance transaction |
+| **Issuer recourse** | Stellar USDC is issued with authorisation revocable, so Circle can freeze a holder's balance, including a contract's. Clawback is not enabled on the asset, so the solvency invariant cannot be violated from outside, but a freeze would halt distribution with no remediation in our bytecode. Accepted rather than designed around at pilot size: the response is to pause contributions and escalate to the issuer, and issuer flags are reviewed as part of approving any asset |
+| **Commodity-backed assets** | Nisab is measured as a weight of gold, but a threshold test for whether zakat is owed does not imply payment in the same asset. A pool holding gold would pass price movement between the obligation and its delivery, and would hand recipients an asset they must sell before they can spend it. Tether Gold is named on the Stellar building blocks roadmap; the trigger is Stellar-native issuance, and per-asset accounting already accommodates it as a governance transaction |
 | **Fiat on-ramp** | Pilot donors arrive holding USDC. Reaching a franc-only donor is a SEP-24 anchor integration, triggered by demonstrated pilot demand from donors who cannot self-fund |
 | **Standing Shariah board** | One qualified advisor validates the pilot parameter set. A board is planned for scale beyond the pilot partner, and is not claimed as present |
 
@@ -358,7 +381,7 @@ Each line is a decision with a stated trigger, rather than something nobody cons
 
 CipherPhi composes vetted Stellar infrastructure around one custom contract rather than rebuilding it. The status column separates what is funded from what is not, and that separation is enforced everywhere in this document.
 
-The indexer depends on one property in particular: because the Stellar Asset Contract implements SEP-41, asset movements surface the same standardised transfer events whether they originate from a payment operation or from a contract call, so an indexer observes the whole trail through one uniform interface.[^21]
+The indexer depends on one property in particular: because the Stellar Asset Contract implements SEP-41, asset movements surface the same standardised transfer events whether they originate from a payment operation or from a contract call, so an indexer observes the whole trail through one uniform interface.[^22]
 
 | Building block | Role in CipherPhi | Status |
 | --- | --- | --- |
@@ -370,9 +393,10 @@ The indexer depends on one property in particular: because the Stellar Asset Con
 | SCF Soroban Audit Bank | Independent security review of the contract before mainnet | Committed |
 | Stellar Disbursement Platform | Rail for individual-recipient payouts and fiat off-ramp once the pilot expands beyond partner organisations | Planned |
 | EURC via SAC | Second approved asset with its own category buckets, added by governance transaction | Planned |
+| Tether Gold (XAUT) | Gold-denominated approved asset with its own category buckets, contingent on Stellar-native issuance; wrapped or bridged representations stay out | Planned |
 | SEP-24 anchor | Fiat on-ramp so a donor holding only francs or euros can acquire USDC on Stellar | Planned |
 | Sponsored reserves | CipherPhi pays account and trustline reserves, so a donor never holds XLM | Committed |
-| Circle CCTP | Native inbound USDC from other chains, terminating before CipherPhi's code | Planned |
+| Circle CCTP | Native inbound USDC from other chains, terminating before CipherPhi's code | Live on Stellar |
 
 ---
 
@@ -418,5 +442,7 @@ The indexer depends on one property in particular: because the Stellar Asset Con
    stellar.gitbook.io/scf-handbook/supporting-programs/audit-bank/official-rules
 20. Fuzzing Soroban contracts, official guide  
    developers.stellar.org/docs/build/guides/testing/fuzzing
-21. Standardised asset events under SEP-41  
+21. Soroban Rust SDK, supported target and build guidance  
+   github.com/stellar/rs-soroban-sdk
+22. Standardised asset events under SEP-41  
    developers.stellar.org/docs/tokens/anatomy-of-an-asset
