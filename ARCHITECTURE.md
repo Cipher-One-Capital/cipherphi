@@ -1,7 +1,5 @@
 # CipherPhi architecture
 
-**The full technical proposal and delivery plan, including the schedule and budget this file omits, is in [CipherPhi_Technical_Proposal_and_Delivery_Plan.pdf](./CipherPhi_Technical_Proposal_and_Delivery_Plan.pdf).**
-
 CipherPhi moves an operating, audited Swiss zakat foundation onchain. The rules of zakat, pooled custody, allocation across the eight zakat categories, and distribution only to eligible recipients, are encoded in three Soroban smart contracts on Stellar.
 
 This file is the architecture: what is built, why each decision was settled the way it was, and what is deliberately not being built. Where something a reader might expect is absent, it is named under "Not in this build" with the trigger that would change it.
