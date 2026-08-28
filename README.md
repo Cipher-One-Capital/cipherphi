@@ -14,10 +14,7 @@ SCF #45 Build Award submission, Open Track, in panel review. The architecture is
 
 Three Soroban contracts, split by what each may touch. `zakat_pool` holds custody and the per-asset eight-category balances, and has the only two functions that move value. `policy` holds the Shariah parameters and computes the allocation. `attestation` verifies eligibility signatures. One contract holds funds; the other two can never move anything, so the components most likely to change are the ones holding no money.
 
-The full design, including what is deliberately not in this build and the trigger that would change each absence:
-
-- [ARCHITECTURE.md](./ARCHITECTURE.md)
-- [Technical proposal and delivery plan (PDF)](./CipherPhi_Technical_Proposal_and_Delivery_Plan.pdf)
+- The full design: [revised](./ARCHITECTURE.md)
 
 ## Stack
 
@@ -28,20 +25,19 @@ The full design, including what is deliberately not in this build and the trigge
 - Sponsored reserves covering donor accounts and trustlines
 - Circle CCTP, live on Stellar, for native inbound USDC
 
-Planned but not committed: 
+Planned but not committed:
+
 - Stellar Disbursement Platform for individual-recipient payouts
 - SEP-24 anchor for fiat on-ramp
 - Tether Gold contingent on Stellar-native issuance
 
 ## Team
 
-- Swiss Zakat Foundation, the operating institution: Saâd Dhif, Founder and Executive Director. 
-- Bits & Blocks, delivery: Aladdin Battikh, CTO. 
-- Muhammad Emamally, Shariah authority for the pilot. 
+- [Swiss Zakat Foundation](https://zakat.ch), the operating institution: Saâd Dhif, Founder and Executive Director.
+- [Bits & Blocks](https://www.bitsandblocks.tech), delivery: Aladdin Battikh, CTO.
+- Muhammad Emamally, Shariah authority for the pilot.
 - Ismail Amara, partnerships and pilot.
-
-[zakat.ch](https://zakat.ch) · [bitsandblocks.tech](https://www.bitsandblocks.tech)
 
 ## License
 
-Apache 2.0
+Apache 2.0, see [LICENSE](./LICENSE)
