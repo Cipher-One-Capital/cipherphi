@@ -21,9 +21,17 @@ The full design, including what is deliberately not in this build and the trigge
 
 ## Stack
 
-Stellar · Soroban, Rust to Wasm on the soroban-sdk 27 line · Stellar Asset Contract custody, USDC first with EURC planned · Privy embedded wallets, with the Stellar Wallets Kit as the named fallback · Sponsored reserves covering donor accounts and trustlines · Circle CCTP, live on Stellar, for native inbound USDC
+- Stellar
+- Soroban, Rust to Wasm on the soroban-sdk 27
+- Stellar Asset Contract custody, USDC first with EURC planned
+- Privy embedded wallets, with the Stellar Wallets Kit as the named fallback
+- Sponsored reserves covering donor accounts and trustlines
+- Circle CCTP, live on Stellar, for native inbound USDC
 
-Planned with stated triggers rather than committed: the Stellar Disbursement Platform for individual-recipient payouts, a SEP-24 anchor for fiat on-ramp, and Tether Gold contingent on Stellar-native issuance.
+Planned but not committed: 
+- Stellar Disbursement Platform for individual-recipient payouts
+- SEP-24 anchor for fiat on-ramp
+- Tether Gold contingent on Stellar-native issuance
 
 ## Team
 
