@@ -28,20 +28,19 @@ The full design, including what is deliberately not in this build and the trigge
 - Sponsored reserves covering donor accounts and trustlines
 - Circle CCTP, live on Stellar, for native inbound USDC
 
-Planned but not committed: 
+Planned but not committed:
+
 - Stellar Disbursement Platform for individual-recipient payouts
 - SEP-24 anchor for fiat on-ramp
 - Tether Gold contingent on Stellar-native issuance
 
 ## Team
 
-- Swiss Zakat Foundation, the operating institution: Saâd Dhif, Founder and Executive Director. 
-- Bits & Blocks, delivery: Aladdin Battikh, CTO. 
-- Muhammad Emamally, Shariah authority for the pilot. 
+- [Swiss Zakat Foundation](https://zakat.ch), the operating institution: Saâd Dhif, Founder and Executive Director.
+- [Bits & Blocks](https://www.bitsandblocks.tech), delivery: Aladdin Battikh, CTO.
+- Muhammad Emamally, Shariah authority for the pilot.
 - Ismail Amara, partnerships and pilot.
-
-[zakat.ch](https://zakat.ch) · [bitsandblocks.tech](https://www.bitsandblocks.tech)
 
 ## License
 
-Apache 2.0
+Apache 2.0, see [LICENSE](./LICENSE)
