@@ -14,10 +14,7 @@ SCF #45 Build Award submission, Open Track, in panel review. The architecture is
 
 Three Soroban contracts, split by what each may touch. `zakat_pool` holds custody and the per-asset eight-category balances, and has the only two functions that move value. `policy` holds the Shariah parameters and computes the allocation. `attestation` verifies eligibility signatures. One contract holds funds; the other two can never move anything, so the components most likely to change are the ones holding no money.
 
-The full design, including what is deliberately not in this build and the trigger that would change each absence:
-
-- [ARCHITECTURE.md](./ARCHITECTURE.md)
-- [Technical proposal and delivery plan (PDF)](./CipherPhi_Technical_Proposal_and_Delivery_Plan.pdf)
+- The full design: [revised](./ARCHITECTURE.md)
 
 ## Stack
 
