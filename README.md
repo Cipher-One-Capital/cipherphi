@@ -27,7 +27,10 @@ Planned with stated triggers rather than committed: the Stellar Disbursement Pla
 
 ## Team
 
-Swiss Zakat Foundation, the operating institution: Saâd Dhif, Founder and Executive Director. Bits & Blocks, delivery: Aladdin Battikh, CTO. Muhammad Emamally, Shariah authority for the pilot. Ismail Amara, partnerships and pilot.
+- Swiss Zakat Foundation, the operating institution: Saâd Dhif, Founder and Executive Director. 
+- Bits & Blocks, delivery: Aladdin Battikh, CTO. 
+- Muhammad Emamally, Shariah authority for the pilot. 
+- Ismail Amara, partnerships and pilot.
 
 [zakat.ch](https://zakat.ch) · [bitsandblocks.tech](https://www.bitsandblocks.tech)
 
