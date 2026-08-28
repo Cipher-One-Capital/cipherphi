@@ -8,7 +8,9 @@ CipherPhi is the onchain layer for the Swiss Zakat Foundation, a federally super
 
 ## Status
 
-SCF #45 Build Award submission, Open Track, in panel review. The architecture is at Revision 2, incorporating the findings of an independent pre-implementation security review. Funded contract development begins at grant kickoff. The delivery partner's Stellar integration examples are already public at [bits-and-blocks/stellar-examples](https://github.com/bits-and-blocks/stellar-examples).
+SCF #45 Build Award submission, Open Track, in panel review. The architecture is at Revision 2, incorporating the findings of an independent pre-implementation security review. Funded contract development begins at grant kickoff. 
+
+> Check the delivery partner's Stellar integration examples [bits-and-blocks/stellar-examples](https://github.com/bits-and-blocks/stellar-examples).
 
 ## Architecture
 
@@ -18,12 +20,11 @@ Three Soroban contracts, split by what each may touch. `zakat_pool` holds custod
 
 ## Stack
 
-- Stellar
-- Soroban, Rust to Wasm on the soroban-sdk 27
+- Stellar Soroban, Rust to Wasm on the soroban-sdk 27
 - Stellar Asset Contract custody, USDC first with EURC planned
 - Privy embedded wallets, with the Stellar Wallets Kit as the named fallback
 - Sponsored reserves covering donor accounts and trustlines
-- Circle CCTP, live on Stellar, for native inbound USDC
+- Circle CCTP for native inbound USDC
 
 Planned but not committed:
 
