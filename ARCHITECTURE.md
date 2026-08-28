@@ -1,12 +1,10 @@
 # CipherPhi architecture
 
-**The full technical proposal and delivery plan, including the schedule and budget this file omits, is in [CipherPhi_Technical_Proposal_and_Delivery_Plan.pdf](./CipherPhi_Technical_Proposal_and_Delivery_Plan.pdf).**
-
 CipherPhi moves an operating, audited Swiss zakat foundation onchain. The rules of zakat, pooled custody, allocation across the eight zakat categories, and distribution only to eligible recipients, are encoded in three Soroban smart contracts on Stellar.
 
 This file is the architecture: what is built, why each decision was settled the way it was, and what is deliberately not being built. Where something a reader might expect is absent, it is named under "Not in this build" with the trigger that would change it.
 
-*Revision 2. Incorporates the findings of an independent pre-implementation security review. The delivery plan, deliverables, and budget are unchanged.*
+*Revision 2. Incorporates the findings of a pre-implementation security review.*
 
 ---
 
@@ -402,47 +400,25 @@ The indexer depends on one property in particular: because the Stellar Asset Con
 
 ## References
 
-1. HAQQ, Evergreen DAO endowment mechanism  
-   haqq.network/shariah-compliance-en
-2. Zakat Coin, donor-facing zakat platform  
-   zktcoin.com
-3. A blockchain based decentralized zakat collection and distribution platform  
-   dl.acm.org/doi/10.1145/3641067.3641071
-4. CCTP on Stellar, maintained by Circle  
-   developers.stellar.org/docs/tokens/cross-chain-transfers
-5. Resource limits, fees and metering  
-   developers.stellar.org/docs/networks/resource-limits-fees
-6. Stellar Disbursement Platform  
-   developers.stellar.org/docs/platforms/stellar-disbursement-platform
-7. Upgrading contract Wasm in place, and the system event it emits  
-   developers.stellar.org/docs/build/guides/conventions/upgrading-contracts
-8. Soroban state archival and TTL  
-   developers.stellar.org/docs/learn/fundamentals/contract-development/storage/state-archival
-9. Soroban storage types and expiry behaviour  
-   developers.stellar.org/docs/build/guides/storage/choosing-the-right-storage
-10. Contract events, emission and retention  
-   developers.stellar.org/docs/build/guides/events
-11. Stellar Asset Contract and SEP-41  
-   developers.stellar.org/docs/tokens/stellar-asset-contract
-12. SEP-41 token interface specification  
-   github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0041.md
-13. CCTP and USDC contract addresses on Stellar  
-   developers.circle.com/cctp/references/stellar
-14. Sponsored reserves and fee-bump transactions  
-   developers.stellar.org/docs/learn/encyclopedia/transactions-specialized/sponsored-reserves
-15. Stellar wallet integrations, including Privy  
-   developers.stellar.org/docs/tools/developer-tools/wallets
-16. Swiss Zakat Foundation methodology  
-   zakat.ch/knowledge-base/faq
-17. OWASP Smart Contract Top 10 for 2026, from 2025 incident data  
-   owasp.org/www-project-smart-contract-top-10
-18. Soroban Security Audit Bank  
-   stellar.org/grants-and-funding/soroban-audit-bank
-19. Audit Bank rules, remediation and publication  
-   stellar.gitbook.io/scf-handbook/supporting-programs/audit-bank/official-rules
-20. Fuzzing Soroban contracts, official guide  
-   developers.stellar.org/docs/build/guides/testing/fuzzing
-21. Soroban Rust SDK, supported target and build guidance  
-   github.com/stellar/rs-soroban-sdk
-22. Standardised asset events under SEP-41  
-   developers.stellar.org/docs/tokens/anatomy-of-an-asset
+[^1]: HAQQ, Evergreen DAO endowment mechanism. [haqq.network/shariah-compliance-en](https://haqq.network/shariah-compliance-en)
+[^2]: Zakat Coin, donor-facing zakat platform. [zktcoin.com](https://zktcoin.com)
+[^3]: A blockchain based decentralized zakat collection and distribution platform. [dl.acm.org/doi/10.1145/3641067.3641071](https://dl.acm.org/doi/10.1145/3641067.3641071)
+[^4]: CCTP on Stellar, maintained by Circle. [developers.stellar.org/docs/tokens/cross-chain-transfers](https://developers.stellar.org/docs/tokens/cross-chain-transfers)
+[^5]: Resource limits, fees and metering. [developers.stellar.org/docs/networks/resource-limits-fees](https://developers.stellar.org/docs/networks/resource-limits-fees)
+[^6]: Stellar Disbursement Platform. [developers.stellar.org/docs/platforms/stellar-disbursement-platform](https://developers.stellar.org/docs/platforms/stellar-disbursement-platform)
+[^7]: Upgrading contract Wasm in place, and the system event it emits. [developers.stellar.org/docs/build/guides/conventions/upgrading-contracts](https://developers.stellar.org/docs/build/guides/conventions/upgrading-contracts)
+[^8]: Soroban state archival and TTL. [developers.stellar.org/docs/learn/fundamentals/contract-development/storage/state-archival](https://developers.stellar.org/docs/learn/fundamentals/contract-development/storage/state-archival)
+[^9]: Soroban storage types and expiry behaviour. [developers.stellar.org/docs/build/guides/storage/choosing-the-right-storage](https://developers.stellar.org/docs/build/guides/storage/choosing-the-right-storage)
+[^10]: Contract events, emission and retention. [developers.stellar.org/docs/build/guides/events](https://developers.stellar.org/docs/build/guides/events)
+[^11]: Stellar Asset Contract and SEP-41. [developers.stellar.org/docs/tokens/stellar-asset-contract](https://developers.stellar.org/docs/tokens/stellar-asset-contract)
+[^12]: SEP-41 token interface specification. [github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0041.md](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0041.md)
+[^13]: CCTP and USDC contract addresses on Stellar. [developers.circle.com/cctp/references/stellar](https://developers.circle.com/cctp/references/stellar)
+[^14]: Sponsored reserves and fee-bump transactions. [developers.stellar.org/docs/learn/encyclopedia/transactions-specialized/sponsored-reserves](https://developers.stellar.org/docs/learn/encyclopedia/transactions-specialized/sponsored-reserves)
+[^15]: Stellar wallet integrations, including Privy. [developers.stellar.org/docs/tools/developer-tools/wallets](https://developers.stellar.org/docs/tools/developer-tools/wallets)
+[^16]: Swiss Zakat Foundation methodology. [zakat.ch/knowledge-base/faq](https://zakat.ch/knowledge-base/faq)
+[^17]: OWASP Smart Contract Top 10 for 2026, from 2025 incident data. [owasp.org/www-project-smart-contract-top-10](https://owasp.org/www-project-smart-contract-top-10)
+[^18]: Soroban Security Audit Bank. [stellar.org/grants-and-funding/soroban-audit-bank](https://stellar.org/grants-and-funding/soroban-audit-bank)
+[^19]: Audit Bank rules, remediation and publication. [stellar.gitbook.io/scf-handbook/supporting-programs/audit-bank/official-rules](https://stellar.gitbook.io/scf-handbook/supporting-programs/audit-bank/official-rules)
+[^20]: Fuzzing Soroban contracts, official guide. [developers.stellar.org/docs/build/guides/testing/fuzzing](https://developers.stellar.org/docs/build/guides/testing/fuzzing)
+[^21]: Soroban Rust SDK, supported target and build guidance. [github.com/stellar/rs-soroban-sdk](https://github.com/stellar/rs-soroban-sdk)
+[^22]: Standardised asset events under SEP-41. [developers.stellar.org/docs/tokens/anatomy-of-an-asset](https://developers.stellar.org/docs/tokens/anatomy-of-an-asset)
