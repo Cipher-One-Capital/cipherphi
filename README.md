@@ -8,7 +8,7 @@ CipherPhi is the onchain layer for the Swiss Zakat Foundation, a federally super
 
 ## Status
 
-SCF #45 Build Award submission, Open Track, in panel review. The architecture is at Revision 2, incorporating the findings of an independent pre-implementation security review. Funded contract development begins at grant kickoff. 
+SCF #45 Build Award submission, Open Track, in panel review. The architecture is at Revision 2, incorporating the findings of an internal pre-implementation security review. Funded contract development begins at grant kickoff.
 
 > Check the delivery partner's Stellar integration examples [bits-and-blocks/stellar-examples](https://github.com/bits-and-blocks/stellar-examples).
 

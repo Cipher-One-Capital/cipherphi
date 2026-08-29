@@ -4,7 +4,7 @@ CipherPhi moves an operating, audited Swiss zakat foundation onchain. The rules 
 
 This file is the architecture: what is built, why each decision was settled the way it was, and what is deliberately not being built. Where something a reader might expect is absent, it is named under "Not in this build" with the trigger that would change it.
 
-*Revision 2. Incorporates the findings of a pre-implementation security review.*
+*Revision 2. Incorporates the findings of an internal pre-implementation security review.*
 
 ---
 
