@@ -8,15 +8,21 @@ CipherPhi is the onchain layer for the Swiss Zakat Foundation, a federally super
 
 ## Status
 
-SCF #45 Build Award submission, Open Track, in panel review. The architecture is at Revision 2, incorporating the findings of an internal pre-implementation security review. Funded contract development begins at grant kickoff.
+SCF #45 Build Award submission, Open Track, shortlisted for Community Vote. The architecture is at Revision 2, incorporating the findings of an internal pre-implementation security review.
 
-> Check the delivery partner's Stellar integration examples [bits-and-blocks/stellar-examples](https://github.com/bits-and-blocks/stellar-examples).
+> Bits & Blocks has published working examples covering the integrations this build depends on. Read more: [bits-and-blocks/stellar-examples](https://github.com/bits-and-blocks/stellar-examples).
 
 ## Architecture
 
-Three Soroban contracts, split by what each may touch. `zakat_pool` holds custody and the per-asset eight-category balances, and has the only two functions that move value. `policy` holds the Shariah parameters and computes the allocation. `attestation` verifies eligibility signatures. One contract holds funds; the other two can never move anything, so the components most likely to change are the ones holding no money.
+CipherPhi is composed of three main Soroban contracts:
 
-- The full design: [revised](./ARCHITECTURE.md)
+- `zakat_pool` holds custody and the per-asset eight-category balances, and has the only two functions that move value.
+- `policy` holds the Shariah parameters and computes the allocation.
+- `attestation` verifies eligibility signatures.
+
+One contract holds funds; the other two can never move anything, so the components most likely to change are the ones holding no money.
+
+Read the full design: [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Stack
 
@@ -36,8 +42,8 @@ Planned but not committed:
 
 - [Swiss Zakat Foundation](https://zakat.ch), the operating institution: Saâd Dhif, Founder and Executive Director.
 - [Bits & Blocks](https://www.bitsandblocks.tech), delivery: Aladdin Battikh, CTO.
-- Muhammad Emamally, Shariah authority for the pilot.
-- Ismail Amara, partnerships and pilot.
+- [Muhammad Emamally](https://www.linkedin.com/in/phil-emamally-/), Shariah authority for the pilot.
+- [Ismail Amara](https://www.linkedin.com/in/ismail-a-667666111/), partnerships and pilot.
 
 ## License
 
