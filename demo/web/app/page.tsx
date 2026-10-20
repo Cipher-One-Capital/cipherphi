@@ -26,6 +26,7 @@ import {
   formatTchf,
 } from "@/lib/stellar";
 import { useSession } from "@/lib/wallet/session";
+import { ErrorBox, Status } from "@/components/ui";
 
 type Progress = {
   contribution?: string;
@@ -170,9 +171,7 @@ function Give({
   if (!session.ready) {
     return (
       <section className="card">
-        <p className="status">
-          <span className="spinner" /> Loading…
-        </p>
+        <Status>Loading…</Status>
       </section>
     );
   }
@@ -252,7 +251,7 @@ function Give({
           {phase === "giving" && <Status>Sending to the zakat pool on Stellar testnet.</Status>}
         </>
       )}
-      {error && <p className="error">{error}</p>}
+      {error && <ErrorBox title="Request not completed.">{error}</ErrorBox>}
     </section>
   );
 }
@@ -327,7 +326,7 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
           </tfoot>
         </table>
       )}
-      {error && <p className="error">{error}</p>}
+      {error && <ErrorBox title="Request not completed.">{error}</ErrorBox>}
       <p className="note">
         Your gift is read from the event the contract recorded for your transaction; the pool column
         is read live from contract state. The percentages are a demo placeholder, not the
@@ -399,7 +398,7 @@ function Release({
           {busy === "approved" ? "Releasing…" : approved ? "Released" : "Release with approval"}
         </button>
         <button
-          className="btn ghost"
+          className="btn secondary"
           onClick={() => run(false)}
           disabled={busy !== null || !!refused}
         >
@@ -446,7 +445,7 @@ function Release({
         </div>
       )}
 
-      {error && <p className="error">{error}</p>}
+      {error && <ErrorBox title="Request not completed.">{error}</ErrorBox>}
 
       <p className="note">
         In this demo one server holds the distributor key and two of the signer keys, so the whole
@@ -483,7 +482,7 @@ function Check({ progress }: { progress: Progress }) {
           Open your receipt
         </Link>
         <button
-          className="btn ghost"
+          className="btn secondary"
           onClick={() => {
             navigator.clipboard
               ?.writeText(new URL(href, location.href).toString())
@@ -499,14 +498,5 @@ function Check({ progress }: { progress: Progress }) {
         holds transaction hashes only.
       </p>
     </section>
-  );
-}
-
-function Status({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="status" role="status">
-      <span className="spinner" aria-hidden="true" />
-      <span>{children}</span>
-    </p>
   );
 }
