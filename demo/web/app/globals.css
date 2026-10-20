@@ -584,8 +584,13 @@ code {
   line-height: 18px;
   color: var(--cp-ink-2);
 }
+/* Bars start empty and grow to their share once the table is in view, 60 ms
+   apart down the table. The figures beside them appear at once. */
 .share-bar {
   display: block;
+  width: 0;
+  transition: width 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: calc(var(--i, 0) * 60ms);
   height: 10px;
   background: var(--cp-lime);
   border-radius: 2px;
@@ -593,6 +598,9 @@ code {
 }
 .share-bar.narrow {
   display: none;
+}
+.split.in .share-bar {
+  width: var(--w);
 }
 .split-total {
   padding: 14px 0 0;
@@ -758,6 +766,17 @@ code {
   flex-direction: column;
   gap: var(--cp-3);
   min-width: 0;
+}
+/* Only a newly added card animates: the other one stays mounted, and the grid
+   reflows to two columns at once. */
+.outcome {
+  animation: appear 240ms ease-out both;
+}
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 .outcome.paid {
   border: var(--cp-border-paid);
@@ -1030,6 +1049,14 @@ code {
   font-size: 12px;
   line-height: 18px;
   color: var(--cp-ink-2);
+}
+
+/* Reduced motion: tokens.css stops every animation and transition, so the
+   spinner holds still as a ring and the bars sit at full width from the start. */
+@media (prefers-reduced-motion: reduce) {
+  .share-bar {
+    width: var(--w);
+  }
 }
 
 @media (max-width: 600px) {

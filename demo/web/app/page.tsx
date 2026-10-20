@@ -312,6 +312,7 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
   }, [contribution]);
 
   const total = mine?.reduce((a, b) => a + b, 0n) ?? 0n;
+  const grow = useGrowIn();
   const top = Math.max(...CATEGORIES.map((c) => c.share));
 
   return (
@@ -326,7 +327,7 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
       </div>
 
       {mine && pool ? (
-        <div className="split" role="table" aria-label="Your gift by zakat category">
+        <div className="split" role="table" aria-label="Your gift by zakat category" ref={grow}>
           <div className="split-row split-head" role="row">
             <span role="columnheader">Category</span>
             <span role="columnheader" className="wide">
@@ -340,18 +341,21 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
             </span>
           </div>
           {CATEGORIES.map((c, i) => {
-            const width = `${((c.share / top) * 100).toFixed(1)}%`;
+            const bar = {
+              "--w": `${((c.share / top) * 100).toFixed(1)}%`,
+              "--i": i,
+            } as React.CSSProperties;
             return (
-              <div className="split-row" role="row" key={c.name}>
+              <div className="split-row" role="row" key={c.name} style={bar}>
                 <div role="rowheader" className="cat">
                   <span className="cat-name">{c.name}</span>
                   <span className="cat-sub">
                     {c.arabic} · {c.share / 100}%
                   </span>
-                  <i className="share-bar narrow" style={{ width }} aria-hidden="true" />
+                  <i className="share-bar narrow" aria-hidden="true" />
                 </div>
                 <div role="cell" className="wide" aria-label={`${c.share / 100}%`}>
-                  <i className="share-bar" style={{ width }} />
+                  <i className="share-bar" />
                 </div>
                 <span role="cell" className="num gift">
                   {formatTchf(mine[i])}
@@ -730,4 +734,28 @@ function Check({ progress }: { progress: Progress }) {
       </Note>
     </section>
   );
+}
+
+/**
+ * Marks the element `.in` the first time it scrolls into view, which starts
+ * the split bars growing. Runs once per mount.
+ */
+function useGrowIn() {
+  return useCallback((el: HTMLElement | null) => {
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      el.classList.add("in");
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          el.classList.add("in");
+          io.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    io.observe(el);
+  }, []);
 }
