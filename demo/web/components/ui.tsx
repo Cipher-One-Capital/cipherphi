@@ -116,9 +116,9 @@ export function DoneIcon({ size = 24 }: { size?: number }) {
   );
 }
 
-/** Middle-truncated hash, 8 characters … 6, with the full value for assistive tech and hover. */
-export function Hash({ value }: { value: string }) {
-  const short = value.length > 16 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
+/** Middle-truncated hash, 8 characters … 6 by default, with the full value on hover. */
+export function Hash({ value, tail = 6 }: { value: string; tail?: number }) {
+  const short = value.length > 8 + tail + 2 ? `${value.slice(0, 8)}…${value.slice(-tail)}` : value;
   return (
     <code className="hash" title={value}>
       {short}

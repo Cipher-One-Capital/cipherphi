@@ -57,10 +57,11 @@ export const explorer = {
     `https://stellar.expert/explorer/testnet/account/${id}`,
 };
 
+/** Two decimals, grouped thousands, no currency symbol: 1,245.00. */
 export function formatTchf(stroops: bigint): string {
-  const whole = stroops / STROOPS;
-  const frac = (stroops % STROOPS).toString().padStart(7, "0").replace(/0+$/, "");
-  return frac ? `${whole}.${frac.slice(0, 2)}` : whole.toString();
+  const whole = (stroops / STROOPS).toLocaleString("en-US");
+  const cents = ((stroops % STROOPS) / 100_000n).toString().padStart(2, "0");
+  return `${whole}.${cents}`;
 }
 
 // --- the attestation ---------------------------------------------------------

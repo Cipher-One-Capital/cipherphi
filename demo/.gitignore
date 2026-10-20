@@ -10,3 +10,4 @@ out/
 node_modules/
 contract/target/
 contract/test_snapshots/
+design-check/

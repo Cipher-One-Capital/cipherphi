@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExplorerLink, Header } from "@/components/Header";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/donate";
 import {
   DONATION,
+  GRANT,
   PAYOUT,
   PAYOUT_CATEGORY,
   POOL_ERRORS,
@@ -26,7 +28,7 @@ import {
   formatTchf,
 } from "@/lib/stellar";
 import { useSession } from "@/lib/wallet/session";
-import { ErrorBox, Status } from "@/components/ui";
+import { Busy, CheckIcon, DoneIcon, ErrorBox, Hash, Note, Spent, Spinner, Status } from "@/components/ui";
 
 type Progress = {
   contribution?: string;
@@ -69,6 +71,12 @@ export default function Demo() {
   const session = useSession();
   const [progress, update] = useProgress(session.address);
   const [step, setStep] = useState(0);
+  // The furthest step this visitor has opened in this tab: only those show as done.
+  const [seen, setSeen] = useState(0);
+  const go = useCallback((i: number) => {
+    setStep(i);
+    setSeen((s) => Math.max(s, i));
+  }, []);
 
   // Land on the furthest step this visitor has reached.
   const reached = progress.approved ? 3 : progress.contribution ? 1 : 0;
@@ -76,9 +84,9 @@ export default function Demo() {
   useEffect(() => {
     if (session.address && restored.current !== session.address && progress.contribution) {
       restored.current = session.address;
-      setStep(reached);
+      go(reached);
     }
-  }, [session.address, progress.contribution, reached]);
+  }, [session.address, progress.contribution, reached, go]);
 
   const furthest = progress.approved || progress.refused ? 3 : progress.contribution ? 2 : 0;
 
@@ -95,20 +103,20 @@ export default function Demo() {
         )}
       </Header>
 
-      <Stepper step={step} furthest={furthest} onGo={setStep} />
+      <Stepper step={step} furthest={Math.min(furthest, seen)} onGo={go} />
 
       {step === 0 && (
         <Give
           contribution={progress.contribution}
           onDonated={(hash) => {
             update({ contribution: hash });
-            setStep(1);
+            go(1);
           }}
-          onNext={() => setStep(1)}
+          onNext={() => go(1)}
         />
       )}
       {step === 1 && progress.contribution && (
-        <Split contribution={progress.contribution} onNext={() => setStep(2)} />
+        <Split contribution={progress.contribution} onNext={() => go(2)} />
       )}
       {step === 2 && progress.contribution && (
         <Release
@@ -116,7 +124,7 @@ export default function Demo() {
           approved={progress.approved}
           refused={progress.refused}
           onResult={(r) => update(r.ok ? { approved: r } : { refused: r })}
-          onNext={() => setStep(3)}
+          onNext={() => go(3)}
         />
       )}
       {step === 3 && progress.contribution && <Check progress={progress} />}
@@ -178,23 +186,31 @@ function Give({
 
   if (!session.connected) {
     return (
-      <section className="card">
-        <h1>Zakat rules, enforced before the money moves.</h1>
-        <p className="lede">
-          Give test francs, watch them split across the eight zakat categories, see a payout
-          released only with a signed approval, and check every step yourself on a public
-          explorer.
-        </p>
-        <div className="actions">
-          <button className="btn" onClick={() => session.connect()}>
-            {session.local ? "Start with a test wallet" : "Sign in with your email"}
-          </button>
+      <section className="card landing">
+        <div className="landing-head">
+          <div className="card-head">
+            <Image className="symbol symbol-sm" src="/cipherphi-symbol.svg" alt="" width={88} height={70} />
+            <h1 className="display">Zakat rules, enforced before the money moves.</h1>
+            <p className="lede">
+              Give test francs, watch them split across the eight zakat categories, see a payout
+              released only with a signed approval, and check every step yourself on a public
+              explorer.
+            </p>
+          </div>
+          <Image className="symbol symbol-lg" src="/cipherphi-symbol.svg" alt="" width={148} height={118} priority />
         </div>
-        <p className="note">
-          {session.local
-            ? "Email sign-in is not switched on for this copy of the demo, so a throwaway test key is kept in this browser tab instead. Still no wallet app and no seed phrase."
-            : "No wallet app and no seed phrase. Your email stays with the sign-in provider and never goes on chain."}
-        </p>
+        <div className="stack">
+          <div className="actions">
+            <button className="btn" onClick={() => session.connect()}>
+              {session.local ? "Start with a test wallet" : "Sign in with your email"}
+            </button>
+          </div>
+          <p className="note">
+            {session.local
+              ? "Email sign-in is not switched on for this copy of the demo, so a throwaway test key is kept in this browser tab instead. Still no wallet app and no seed phrase."
+              : "No wallet app and no seed phrase. Your email stays with the sign-in provider and never goes on chain."}
+          </p>
+        </div>
       </section>
     );
   }
@@ -212,57 +228,71 @@ function Give({
     }
   };
 
+  if (phase === "wallet" || phase === "account") {
+    return (
+      <section className="card">
+        <h1 className="sr-only">Give</h1>
+        <ol className="setup" role="status">
+          <li className={phase === "wallet" ? "active" : "done"}>
+            {phase === "wallet" ? <Spinner size={24} /> : <DoneIcon />}
+            <p>Creating your wallet. There is nothing to write down.</p>
+          </li>
+          {phase === "account" && (
+            <li className="active">
+              <Spinner size={24} />
+              <p>
+                Opening your test account and adding {formatTchf(GRANT * STROOPS)} test francs. The
+                demo pays every network fee, so you never handle crypto.
+              </p>
+            </li>
+          )}
+        </ol>
+        {error && <ErrorBox title="Account not opened.">{error}</ErrorBox>}
+      </section>
+    );
+  }
+
   return (
     <section className="card">
-      <h2>Give</h2>
-      {phase === "wallet" && !error && <Status>Creating your wallet. There is nothing to write down.</Status>}
-      {phase === "account" && !error && (
-        <Status>
-          Opening your test account and adding 100 test francs. The demo pays every network fee, so
-          you never handle crypto.
-        </Status>
+      <h1 className="sr-only">Give</h1>
+      <div className="balance">
+        <span className="label">Test balance</span>
+        <p className="figure">
+          <span>{formatTchf(balance ?? 0n)}</span>
+          <small>tCHF (testnet)</small>
+        </p>
+      </div>
+      {contribution && (
+        <p className="panel">
+          You have already given in this demo.{" "}
+          <ExplorerLink href={explorer.tx(contribution)}>See your donation</ExplorerLink>
+        </p>
       )}
-      {(phase === "ready" || phase === "giving") && balance !== null && (
-        <>
-          <p className="lede">Your test balance</p>
-          <div className="figure">
-            {formatTchf(balance)}
-            <small>tCHF (testnet)</small>
-          </div>
+      {error && <ErrorBox title="Transaction not sent.">{error}</ErrorBox>}
+      <div className="stack">
+        <div className="actions">
           {contribution ? (
-            <>
-              <p className="note">
-                You have already given in this demo.{" "}
-                <ExplorerLink href={explorer.tx(contribution)}>See your donation</ExplorerLink>
-              </p>
-              <div className="actions">
-                <button className="btn" onClick={onNext}>
-                  See how it was split
-                </button>
-              </div>
-            </>
+            <button className="btn" onClick={onNext}>
+              See how it was split
+            </button>
           ) : (
-            <div className="actions">
-              <button className="btn" onClick={give} disabled={phase === "giving"}>
-                {phase === "giving" ? "Giving…" : `Give ${DONATION} tCHF as zakat`}
-              </button>
-            </div>
+            <button className="btn" onClick={give} disabled={phase === "giving"}>
+              {phase === "giving" ? <Busy>Giving…</Busy> : `Give ${DONATION} tCHF as zakat`}
+            </button>
           )}
-          {phase === "giving" && <Status>Sending to the zakat pool on Stellar testnet.</Status>}
-        </>
-      )}
-      {error && <ErrorBox title="Request not completed.">{error}</ErrorBox>}
+        </div>
+        {phase === "giving" && <Status>Sending to the zakat pool on Stellar testnet.</Status>}
+      </div>
     </section>
   );
 }
 
-// --- 2. See it split ---------------------------------------------------------
+// --- 2. Split ----------------------------------------------------------------
 
 function Split({ contribution, onNext }: { contribution: string; onNext: () => void }) {
   const [mine, setMine] = useState<bigint[] | null>(null);
   const [pool, setPool] = useState<bigint[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [shown, setShown] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -272,7 +302,6 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
         if (!split) throw new Error("The donation's split is not readable yet. Try again in a moment.");
         setMine(split.split);
         setPool(balances);
-        requestAnimationFrame(() => setShown(true));
       })
       .catch((e) => live && setError(e.message));
     return () => {
@@ -281,58 +310,96 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
   }, [contribution]);
 
   const total = mine?.reduce((a, b) => a + b, 0n) ?? 0n;
-  const max = mine ? mine.reduce((a, b) => (b > a ? b : a), 0n) : 1n;
+  const top = Math.max(...CATEGORIES.map((c) => c.share));
 
   return (
     <section className="card">
-      <h2>See it split</h2>
-      <p className="lede">
-        The pool split your {DONATION} tCHF across the eight categories the moment it arrived. The
-        rule is fixed in the contract, and the contract refuses any split that does not add up to
-        exactly what was given.
-      </p>
-      {!mine && !error && <Status>Reading your donation from the ledger.</Status>}
-      {mine && pool && (
-        <table className="split">
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th className="num">Your gift</th>
-              <th className="num hide-sm">Pool now holds</th>
-            </tr>
-          </thead>
-          <tbody>
-            {CATEGORIES.map((c, i) => (
-              <tr key={c.name}>
-                <td>
-                  <span className="cat">
-                    {c.name} <em>{c.arabic} · {c.share / 100}%</em>
+      <div className="card-head">
+        <h1>See it split</h1>
+        <p className="lede">
+          The pool split your {DONATION} tCHF across the eight categories the moment it arrived. The
+          rule is fixed in the contract, and the contract refuses any split that does not add up to
+          exactly what was given.
+        </p>
+      </div>
+
+      {mine && pool ? (
+        <div className="split" role="table" aria-label="Your gift by zakat category">
+          <div className="split-row split-head" role="row">
+            <span role="columnheader">Category</span>
+            <span role="columnheader" className="wide">
+              Share
+            </span>
+            <span role="columnheader" className="num">
+              Your gift
+            </span>
+            <span role="columnheader" className="num wide">
+              Pool now holds
+            </span>
+          </div>
+          {CATEGORIES.map((c, i) => {
+            const width = `${((c.share / top) * 100).toFixed(1)}%`;
+            return (
+              <div className="split-row" role="row" key={c.name}>
+                <div role="rowheader" className="cat">
+                  <span className="cat-name">{c.name}</span>
+                  <span className="cat-sub">
+                    {c.arabic} · {c.share / 100}%
                   </span>
-                  <div className="bar" aria-hidden="true">
-                    <i style={{ width: shown ? `${Number((mine[i] * 100n) / (max || 1n))}%` : 0 }} />
-                  </div>
-                </td>
-                <td className="num">{formatTchf(mine[i])}</td>
-                <td className="num hide-sm">{formatTchf(pool[i])}</td>
-              </tr>
+                  <i className="share-bar narrow" style={{ width }} aria-hidden="true" />
+                </div>
+                <div role="cell" className="wide" aria-label={`${c.share / 100}%`}>
+                  <i className="share-bar" style={{ width }} />
+                </div>
+                <span role="cell" className="num gift">
+                  {formatTchf(mine[i])}
+                </span>
+                <span role="cell" className="num pool wide">
+                  {formatTchf(pool[i])}
+                </span>
+              </div>
+            );
+          })}
+          <div className="split-row split-total" role="row">
+            <span role="rowheader">Total</span>
+            <span role="cell" className="cat-sub wide">
+              100%
+            </span>
+            <span role="cell" className="num">
+              {formatTchf(total)}
+            </span>
+            <span role="cell" className="num wide">
+              {formatTchf(pool.reduce((a, b) => a + b, 0n))}
+            </span>
+          </div>
+        </div>
+      ) : error ? (
+        <ErrorBox title="Donation not readable.">{error}</ErrorBox>
+      ) : (
+        <div className="stack">
+          <Status>Reading your donation from the ledger.</Status>
+          <div className="skeleton" aria-hidden="true">
+            {CATEGORIES.map((c) => (
+              <div className="split-row" key={c.name}>
+                <div className="cat">
+                  <i style={{ width: "60%", height: 12 }} />
+                  <i style={{ width: "40%", height: 10 }} />
+                </div>
+                <i className="wide" style={{ width: `${(c.share / top) * 80}%`, height: 10 }} />
+                <i className="num" style={{ width: 48, height: 12 }} />
+                <i className="wide" />
+              </div>
             ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td>Total</td>
-              <td className="num">{formatTchf(total)}</td>
-              <td className="num hide-sm">{formatTchf(pool.reduce((a, b) => a + b, 0n))}</td>
-            </tr>
-          </tfoot>
-        </table>
+          </div>
+        </div>
       )}
-      {error && <ErrorBox title="Request not completed.">{error}</ErrorBox>}
-      <p className="note">
+
+      <Note>
         Your gift is read from the event the contract recorded for your transaction; the pool column
         is read live from contract state. The percentages are a demo placeholder, not the
         Foundation&apos;s allocation, and have not been set by its Shariah authority.{" "}
         <ExplorerLink href={explorer.tx(contribution)}>Your donation on Stellar Expert</ExplorerLink>
-      </p>
+      </Note>
       <div className="actions">
         <button className="btn" onClick={onNext} disabled={!mine}>
           Next: release a payout
@@ -342,7 +409,7 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
   );
 }
 
-// --- 3. See it released ------------------------------------------------------
+// --- 3. Release --------------------------------------------------------------
 
 function Release({
   contribution,
@@ -375,83 +442,106 @@ function Release({
 
   return (
     <section className="card">
-      <h2>See it released</h2>
-      <p className="lede">
-        A vetted partner organisation is paid {formatTchf(PAYOUT * STROOPS)} tCHF from{" "}
-        {category}. The pool pays only if {THRESHOLD} of the {AUTHORITY.length} eligibility signers
-        have approved that exact payout: this recipient, this category, this amount, once.
-      </p>
-
-      <div className="roles">
-        <div className="role">
-          <b>Distributor</b>
-          <span>Can send a payout. Cannot approve one.</span>
-        </div>
-        <div className="role">
-          <b>Eligibility signers</b>
-          <span>Can approve a payout. Cannot send one.</span>
-        </div>
+      <div className="card-head">
+        <h1>See it released</h1>
+        <p className="lede">
+          A vetted partner organisation is paid {formatTchf(PAYOUT * STROOPS)} tCHF from {category}.
+          The pool pays only if {THRESHOLD} of the {AUTHORITY.length} eligibility signers have
+          approved that exact payout: this recipient, this category, this amount, once.
+        </p>
       </div>
 
-      <div className="actions">
-        <button className="btn" onClick={() => run(true)} disabled={busy !== null || !!approved}>
-          {busy === "approved" ? "Releasing…" : approved ? "Released" : "Release with approval"}
-        </button>
-        <button
-          className="btn secondary"
-          onClick={() => run(false)}
-          disabled={busy !== null || !!refused}
-        >
-          {busy === "refused" ? "Trying…" : refused ? "Tried without approval" : "Try it without approval"}
-        </button>
-      </div>
-      {busy && <Status>Submitting to Stellar testnet. This takes a few seconds.</Status>}
+      <RoleDiagram />
 
-      {approved && (
-        <div className="outcome">
-          <span className="tag">Paid</span>
-          <p>
-            <strong>{formatTchf(BigInt(approved.amount))} tCHF</strong> was paid from{" "}
-            {CATEGORIES[approved.category].name.toLowerCase()} to the partner organisation, approved
-            by {THRESHOLD} of {AUTHORITY.length} signers.
-          </p>
-          {approved.attestationHash && (
-            <p className="note">
-              Approval fingerprint <code>{approved.attestationHash}</code>. The approval itself stays
-              off chain; this hash ties the payout to it.
-            </p>
+      <div className="stack">
+        <div className="actions">
+          {approved ? (
+            <button className="btn spent" disabled>
+              <Spent>Released</Spent>
+            </button>
+          ) : (
+            <button className="btn" onClick={() => run(true)} disabled={busy !== null}>
+              {busy === "approved" ? <Busy>Releasing…</Busy> : "Release with approval"}
+            </button>
           )}
-          <p>
-            <ExplorerLink href={explorer.tx(approved.hash)}>The payout on Stellar Expert</ExplorerLink>
-          </p>
+          {refused ? (
+            <button className="btn spent" disabled>
+              <Spent>Tried without approval</Spent>
+            </button>
+          ) : (
+            <button className="btn secondary" onClick={() => run(false)} disabled={busy !== null}>
+              {busy === "refused" ? <Busy>Trying…</Busy> : "Try it without approval"}
+            </button>
+          )}
         </div>
-      )}
-
-      {refused && (
-        <div className="outcome refused">
-          <span className="tag">Refused by the pool</span>
-          <p>
-            <strong>The same payout, with no approval attached.</strong>{" "}
-            {POOL_ERRORS[refused.error?.code ?? 12]?.plain ?? refused.error?.detail}
-          </p>
-          <p className="note">
-            The contract returned <code>{POOL_ERRORS[refused.error?.code ?? 12]?.name}</code> and
-            nothing moved. It was sent to the network on purpose, so the refusal is a public failed
-            transaction rather than our word for it.
-          </p>
-          <p>
-            <ExplorerLink href={explorer.tx(refused.hash)}>The refused attempt on Stellar Expert</ExplorerLink>
-          </p>
-        </div>
-      )}
+        {busy && <Status>Submitting to Stellar testnet. This takes a few seconds.</Status>}
+      </div>
 
       {error && <ErrorBox title="Request not completed.">{error}</ErrorBox>}
 
-      <p className="note">
+      {(approved || refused) && (
+        <div className={`outcomes${approved && refused ? " both" : ""}`} role="status">
+          {approved && (
+            <article className="outcome paid">
+              <span className="tag">
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <circle cx="8" cy="8" r="7" fill="var(--cp-ink)" />
+                  <path
+                    d="M4.8 8.2l2.1 2.1 4.3-4.5"
+                    fill="none"
+                    stroke="var(--cp-lime)"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Paid
+              </span>
+              <p>
+                <strong>{formatTchf(BigInt(approved.amount))} tCHF</strong> was paid from{" "}
+                {CATEGORIES[approved.category].name.toLowerCase()} to the partner organisation,
+                approved by {THRESHOLD} of {AUTHORITY.length} signers.
+              </p>
+              {approved.attestationHash && (
+                <p className="small">
+                  Approval fingerprint <Hash value={approved.attestationHash} />. The approval
+                  itself stays off chain; this hash ties the payout to it.
+                </p>
+              )}
+              <ExplorerLink href={explorer.tx(approved.hash)}>The payout on Stellar Expert</ExplorerLink>
+            </article>
+          )}
+          {refused && (
+            <article className="outcome refused">
+              <span className="tag">
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <circle cx="8" cy="8" r="6.3" fill="none" stroke="var(--cp-ink)" strokeWidth="1.6" />
+                  <path d="M5.2 8h5.6" stroke="var(--cp-ink)" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+                Refused by the pool
+              </span>
+              <p>
+                <strong>The same payout, with no approval attached.</strong>{" "}
+                {POOL_ERRORS[refused.error?.code ?? 12]?.plain ?? refused.error?.detail}
+              </p>
+              <p className="small">
+                The contract returned <code>{POOL_ERRORS[refused.error?.code ?? 12]?.name}</code> and
+                nothing moved. It was sent to the network on purpose, so the refusal is a public
+                failed transaction rather than our word for it.
+              </p>
+              <ExplorerLink href={explorer.tx(refused.hash)}>
+                The refused attempt on Stellar Expert
+              </ExplorerLink>
+            </article>
+          )}
+        </div>
+      )}
+
+      <Note>
         In this demo one server holds the distributor key and two of the signer keys, so the whole
-        flow runs in a minute. The contract enforces the separation either way; in the pilot they
-        are different organisations.
-      </p>
+        flow runs in a minute. The contract enforces the separation either way; in the pilot they are
+        different organisations.
+      </Note>
       <div className="actions">
         <button className="btn" onClick={onNext} disabled={!approved && !refused}>
           Next: check it yourself
@@ -461,7 +551,114 @@ function Release({
   );
 }
 
-// --- 4. Check it -------------------------------------------------------------
+/** The two roles, joined into the one thing a payout needs: both of them. */
+function RoleDiagram() {
+  return (
+    <div className="roles">
+      <div className="role-cards">
+        <div className="role">
+          <div className="role-head">
+            <span className="role-icon">
+              <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                <path
+                  d="M3 10h12M11 5.5L15.5 10 11 14.5"
+                  fill="none"
+                  stroke="var(--cp-ink)"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <h2>Distributor</h2>
+          </div>
+          <ul>
+            <li>
+              <CheckIcon />
+              Can send a payout.
+            </li>
+            <li className="cannot">
+              <NoIcon />
+              Cannot approve one.
+            </li>
+          </ul>
+        </div>
+        <div className="role-plus" aria-hidden="true">
+          +
+        </div>
+        <div className="role">
+          <div className="role-head">
+            <span className="role-icon">
+              <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                <path
+                  d="M4 14.5c2-1 2.5-4.5 4.5-4.5 1.8 0 1 3 2.8 3 1.4 0 2-2 3.7-2"
+                  fill="none"
+                  stroke="var(--cp-ink)"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+                <path d="M3 17h14" stroke="var(--cp-ink)" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </span>
+            <h2>Eligibility signers</h2>
+            <span className="quorum" role="img" aria-label={`${THRESHOLD} of ${AUTHORITY.length} signers needed`}>
+              {AUTHORITY.map((a, i) =>
+                i < THRESHOLD ? (
+                  <svg key={a} width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                    <circle cx="7" cy="7" r="6.5" fill="var(--cp-lime)" />
+                  </svg>
+                ) : (
+                  <svg key={a} width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                    <circle
+                      cx="7"
+                      cy="7"
+                      r="6"
+                      fill="none"
+                      stroke="var(--cp-muted-mark)"
+                      strokeWidth="1.2"
+                      strokeDasharray="2 1.6"
+                    />
+                  </svg>
+                ),
+              )}
+            </span>
+          </div>
+          <ul>
+            <li>
+              <CheckIcon />
+              Can approve a payout.
+            </li>
+            <li className="cannot">
+              <NoIcon />
+              Cannot send one.
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div className="role-join" aria-hidden="true">
+        <i />
+        <i />
+      </div>
+      <p className="role-pill">
+        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+          <circle cx="5" cy="5" r="5" fill="var(--cp-lime)" />
+        </svg>
+        Payout requires both
+      </p>
+    </div>
+  );
+}
+
+function NoIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M3.8 12.2l8.4-8.4" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+// --- 4. Check ----------------------------------------------------------------
 
 function Check({ progress }: { progress: Progress }) {
   const params = new URLSearchParams({ c: progress.contribution! });
@@ -472,17 +669,20 @@ function Check({ progress }: { progress: Progress }) {
 
   return (
     <section className="card">
-      <h2>Check it</h2>
-      <p className="lede">
-        Your receipt lists every step with a link to its transaction on Stellar Expert, a public
-        explorer we do not run. You do not have to trust this page, or us.
-      </p>
+      <div className="card-head">
+        <h1>Check it</h1>
+        <p className="lede">
+          Your receipt lists every step with a link to its transaction on Stellar Expert, a public
+          explorer we do not run. You do not have to trust this page, or us.
+        </p>
+      </div>
       <div className="actions">
         <Link className="btn" href={href}>
           Open your receipt
         </Link>
         <button
           className="btn secondary"
+          aria-live="polite"
           onClick={() => {
             navigator.clipboard
               ?.writeText(new URL(href, location.href).toString())
@@ -490,13 +690,42 @@ function Check({ progress }: { progress: Progress }) {
               .catch(() => {});
           }}
         >
-          {copied ? "Link copied" : "Copy receipt link"}
+          {copied ? (
+            <>
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                <circle cx="9" cy="9" r="8" fill="var(--cp-lime)" stroke="var(--cp-ink)" strokeWidth="1.2" />
+                <path
+                  d="M5.5 9.3l2.3 2.3 4.7-5"
+                  fill="none"
+                  stroke="var(--cp-ink)"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Link copied
+            </>
+          ) : (
+            <>
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                <rect x="6" y="6" width="9" height="9" rx="2" fill="none" stroke="var(--cp-ink)" strokeWidth="1.5" />
+                <path
+                  d="M12 3.5H5A1.5 1.5 0 0 0 3.5 5v7"
+                  fill="none"
+                  stroke="var(--cp-ink)"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Copy receipt link
+            </>
+          )}
         </button>
       </div>
-      <p className="note">
-        The receipt is a public page: anyone with the link can open it, without signing in. It
-        holds transaction hashes only.
-      </p>
+      <Note>
+        The receipt is a public page: anyone with the link can open it, without signing in. It holds
+        transaction hashes only.
+      </Note>
     </section>
   );
 }
