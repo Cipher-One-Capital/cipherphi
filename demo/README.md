@@ -19,9 +19,9 @@ Testnet is reset roughly quarterly and every contract on it is deleted. If the i
 ## The four moments
 
 1. **Give.** Sign in with an email through Privy, with no wallet app and no seed phrase. The demo opens the visitor's Stellar account with sponsored reserves, adds the tCHF trustline, and gives them 100 tCHF in one transaction. The visitor then donates 50 tCHF. The treasury pays every fee with a fee-bump, so the visitor never holds XLM.
-2. **See it split.** The donation's split across the eight categories, read from the `Contribution` event the pool emitted, next to the pool's eight balances read live from contract state.
-3. **See it released.** A 10 tCHF payout from "The poor" to the partner organisation, with a 2-of-3 signed approval, succeeds. The same payout with no approval is sent to the network anyway and fails with `ThresholdNotMet` (contract error 12). The UI shows that reason, and the failed transaction is public.
-4. **Check it.** A public receipt at `/receipt?c=…&r=…&f=…`, which re-reads every transaction from the ledger by hash and links each one to Stellar Expert.
+2. **Split.** The donation's split across the eight categories, read from the `Contribution` event the pool emitted, next to the pool's eight balances read live from contract state.
+3. **Release.** A 10 tCHF payout from "The poor" to the partner organisation, with a 2-of-3 signed approval, succeeds. The same payout with no approval is sent to the network anyway and fails with `ThresholdNotMet` (contract error 12). The UI shows that reason, and the failed transaction is public.
+4. **Check.** A public receipt at `/receipt?c=…&r=…&f=…`, which re-reads every transaction from the ledger by hash and links each one to Stellar Expert.
 
 ## What it is built from
 
@@ -63,6 +63,8 @@ npm run check:vector                # the attestation encoder against the contra
 npm run dev -- -p 3100
 BASE=http://localhost:3100 npm run check:flow   # the four moments via the API, live testnet
 npx playwright test e2e/four-moments.spec.ts    # the four moments in a browser
+DESIGN_CHECK=../design-check npx playwright test e2e/states.spec.ts  # every screen state, 1280 and 375 px
+npx playwright test e2e/a11y.spec.ts            # axe, keyboard focus ring, 48 px buttons
 ```
 
 `deploy.mjs` writes `deployment.json` and its copy in `web/lib/`, both public and committed, and `.secrets.json`, which holds the testnet keys and is gitignored.

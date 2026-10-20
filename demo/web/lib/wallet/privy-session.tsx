@@ -23,7 +23,7 @@ export function PrivySessionProvider({
       appId={appId}
       config={{
         loginMethods: ["email"],
-        appearance: { theme: "light", accentColor: "#101820" },
+        appearance: { theme: "light", accentColor: "#0E0E12" },
         // Stellar wallets are created explicitly through /extended-chains.
         // These are off so signing in does not mint EVM or Solana wallets.
         embeddedWallets: {
