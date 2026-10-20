@@ -30,33 +30,33 @@ test("recording", async ({ page }) => {
   await hold(page, 5000);
   await page.getByRole("button", { name: /Give 50 tCHF/ }).click();
 
-  // 2. See it split
-  await expect(page.locator("table.split tbody tr")).toHaveCount(8);
+  // 2. Split
+  await expect(page.locator(".split .split-row:not(.split-head):not(.split-total)")).toHaveCount(8);
   await hold(page, 6000);
   await glide(page, 520);
   await hold(page, 8000);
   await glide(page, 1000);
   await hold(page, 6000);
-  await page.getByRole("button", { name: "Next: release a payout" }).click();
+  await page.getByRole("button", { name: "Next: Release" }).click();
   await glide(page, 0);
 
-  // 3. See it released
+  // 3. Release
   await hold(page, 6000);
   await page.getByRole("button", { name: "Release with approval" }).click();
-  await expect(page.locator(".outcome").filter({ hasText: "Paid" })).toBeVisible();
+  await expect(page.locator(".outcome.paid")).toBeVisible();
   await glide(page, 300);
   await hold(page, 8000);
   await page.getByRole("button", { name: "Try it without approval" }).click();
   await expect(page.locator(".outcome.refused")).toBeVisible();
   await glide(page, 620);
   await hold(page, 10000);
-  await page.getByRole("button", { name: "Next: check it yourself" }).click();
+  await page.getByRole("button", { name: "Next: Check" }).click();
   await glide(page, 0);
 
   // 4. Check it
   await hold(page, 4000);
   await page.getByRole("link", { name: "Open your receipt" }).click();
-  await expect(page.getByText("50 tCHF received by the zakat pool")).toBeVisible();
+  await expect(page.getByText("received by the zakat pool")).toBeVisible();
   await expect(page.getByText(/to the partner organisation/)).toBeVisible();
   await hold(page, 8000);
   await glide(page, 520);

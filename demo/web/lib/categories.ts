@@ -16,3 +16,6 @@ export const CATEGORIES = [
   { name: "In the cause of God", arabic: "fī sabīl Allāh", share: 1000 },
   { name: "The wayfarer", arabic: "ibn al-sabīl", share: 500 },
 ] as const;
+
+/** "the share for the poor": how copy names the category a payout comes from. */
+export const shareFor = (category: number) => `the share for ${CATEGORIES[category].name.toLowerCase()}`;

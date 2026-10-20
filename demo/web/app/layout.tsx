@@ -13,7 +13,7 @@ const sans = DM_Sans({
 export const metadata: Metadata = {
   title: "CipherPhi testnet demo",
   description:
-    "Zakat rules enforced before money moves. Give test francs, see the split across the eight categories, watch a payout released only with approval, and check it all on a public explorer.",
+    "Enforces zakat rules before funds move. A testnet demo: give, see the split across the eight zakat categories, see a payout released only with approval, check every step on a public explorer.",
 };
 
 export const viewport: Viewport = { themeColor: "#f2f2f2" };

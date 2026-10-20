@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { rpc } from "@stellar/stellar-sdk";
 import { ExplorerLink, Header } from "@/components/Header";
-import { CATEGORIES } from "@/lib/categories";
+import { CATEGORIES, shareFor } from "@/lib/categories";
 import { Hash, InfoIcon, Spinner } from "@/components/ui";
 import {
   ASSET_CONTRACT,
@@ -67,7 +67,7 @@ function useTx(
         if (tx.status === rpc.Api.GetTransactionStatus.NOT_FOUND) {
           setRow({
             state: "missing",
-            why: "The testnet node does not have this transaction. It keeps about a week of history; the explorer link still works.",
+            why: "Transaction not found on the testnet node, which keeps about one week of history. The explorer link still resolves.",
           });
           return;
         }
@@ -75,32 +75,32 @@ function useTx(
         if (typeof out === "string") setRow({ state: "missing", why: out });
         else setRow({ state: "ok", ledgerTime: utc(Number(tx.createdAt)), data: out });
       })
-      .catch(() => setRow({ state: "missing", why: "Could not reach the testnet node. Use the explorer link." }));
+      .catch(() => setRow({ state: "missing", why: "Testnet node unreachable. The explorer link still resolves." }));
   }, [hash, read]);
   if (!hash) return null;
-  if (!valid) return { state: "missing", why: "This is not a transaction hash." };
+  if (!valid) return { state: "missing", why: "Not a transaction hash." };
   return fetched?.hash === hash ? fetched.row : { state: "loading" };
 }
 
 const readDonation = (tx: rpc.Api.GetSuccessfulTransactionResponse | rpc.Api.GetFailedTransactionResponse) => {
-  if (tx.status !== rpc.Api.GetTransactionStatus.SUCCESS) return "This transaction failed, so it is not a donation.";
+  if (tx.status !== rpc.Api.GetTransactionStatus.SUCCESS) return "Not a donation: this transaction failed.";
   const c = contributionFromEvents(tx.events?.contractEventsXdr?.flat() ?? []);
-  return c ? { ...c } : "This transaction is not a donation to the CipherPhi demo pool.";
+  return c ? { ...c } : "Not a donation to the CipherPhi demo pool.";
 };
 
 const readPayout = (tx: rpc.Api.GetSuccessfulTransactionResponse | rpc.Api.GetFailedTransactionResponse) => {
-  if (tx.status !== rpc.Api.GetTransactionStatus.SUCCESS) return "This transaction failed, so nothing was paid.";
+  if (tx.status !== rpc.Api.GetTransactionStatus.SUCCESS) return "Not a payout: this transaction failed, so nothing moved.";
   const d = disbursementFromEvents(tx.events?.contractEventsXdr?.flat() ?? []);
-  return d ? { ...d } : "This transaction is not a payout from the CipherPhi demo pool.";
+  return d ? { ...d } : "Not a payout from the CipherPhi demo pool.";
 };
 
 const readRefusal = (tx: rpc.Api.GetSuccessfulTransactionResponse | rpc.Api.GetFailedTransactionResponse) => {
-  if (tx.status === rpc.Api.GetTransactionStatus.SUCCESS) return "This transaction succeeded, so it is not a refusal.";
+  if (tx.status === rpc.Api.GetTransactionStatus.SUCCESS) return "Not a refusal: this transaction succeeded.";
   const envelope = tx.envelopeXdr.v1?.().tx();
   const op = envelope?.operations()[0]?.body();
   const call = op?.switch().name === "invokeHostFunction" ? op.invokeHostFunctionOp().hostFunction().invokeContract() : null;
   if (!call || call.functionName().toString() !== "distribute") {
-    return "This transaction is not a payout attempt against the demo pool.";
+    return "Not a payout attempt against the demo pool.";
   }
   return { code: 12 };
 };
@@ -119,8 +119,8 @@ function Receipt() {
           <path d="M32 3v10h10" fill="none" stroke="var(--cp-ink)" strokeWidth="1.5" strokeLinejoin="round" />
           <path d="M16 26h18M16 33h18M16 40h10" stroke="var(--cp-muted-mark)" strokeWidth="1.5" strokeDasharray="3 3" />
         </svg>
-        <h1>No receipt here</h1>
-        <p>A receipt link carries the transaction hashes of a demo donation.</p>
+        <h1>No receipt found.</h1>
+        <p>A receipt link carries the transaction hashes of one demo donation.</p>
       </section>
     );
   }
@@ -131,8 +131,8 @@ function Receipt() {
         <div className="card-head">
           <h1>Receipt</h1>
           <p className="lede">
-            Every line below is read from Stellar testnet by its transaction hash. Follow any link to
-            see the same record on Stellar Expert, a public explorer CipherPhi does not run.
+            Reads each line from Stellar testnet by transaction hash. Each link opens the same record
+            on Stellar Expert, a public explorer not run by CipherPhi.
           </p>
         </div>
 
@@ -175,8 +175,8 @@ function Receipt() {
               render={(d) => (
                 <p>
                   <span className="num">{formatTchf(d.amount as bigint)} tCHF</span> from{" "}
-                  {CATEGORIES[d.category as number].name.toLowerCase()} to the partner organisation
-                  {d.recipient === PARTNER ? "" : ` ${d.recipient}`}. Approval fingerprint{" "}
+                  {shareFor(d.category as number)} to the partner organisation
+                  {d.recipient === PARTNER ? "" : ` ${d.recipient}`}. Approval fingerprint:{" "}
                   <Hash value={d.attestationHash as string} />
                 </p>
               )}
@@ -190,8 +190,8 @@ function Receipt() {
               row={refusal}
               render={() => (
                 <p>
-                  {POOL_ERRORS[12].plain} On the explorer this shows as a failed transaction calling{" "}
-                  <code>distribute</code>.
+                  {POOL_ERRORS[12].plain} Appears on the explorer as a failed <code>distribute</code>{" "}
+                  call.
                 </p>
               )}
             />
@@ -200,7 +200,7 @@ function Receipt() {
       </section>
 
       <section className="card">
-        <h2>Check the system, not just the receipt</h2>
+        <h2>Verify the system</h2>
         <dl className="facts">
           <dt>Zakat pool</dt>
           <dd>
@@ -226,9 +226,9 @@ function Receipt() {
           </dd>
         </dl>
         <p className="facts-note">
-          The contract code hash can be rebuilt from the published source, so anyone can confirm the
-          pool runs the code it claims. No personal data is on chain: addresses, amounts and hashes
-          only. Testnet demo, unaudited contracts.
+          Contract code hash: reproducible from the published source; confirms the pool runs the code
+          it claims. On-chain data: addresses, amounts and hashes only; no personal data. Testnet
+          demo; contracts unaudited.
         </p>
       </section>
     </>

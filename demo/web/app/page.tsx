@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExplorerLink, Header } from "@/components/Header";
 import { Stepper } from "@/components/Stepper";
-import { CATEGORIES } from "@/lib/categories";
+import { CATEGORIES, shareFor } from "@/lib/categories";
 import {
   type ReleaseResult,
   donate,
@@ -190,10 +190,10 @@ function Give({
         <div className="landing-head">
           <div className="card-head">
             <Image className="symbol symbol-sm" src="/cipherphi-symbol.svg" alt="" width={88} height={70} />
-            <h1 className="display">Zakat rules, enforced before the money moves.</h1>
+            <h1 className="display">Enforces zakat rules before funds move.</h1>
             <p className="lede">
-              Give test francs, watch them split across the eight zakat categories, see a payout
-              released only with a signed approval, and check every step yourself on a public
+              Splits each donation across the eight zakat categories. Releases a payout only with{" "}
+              {THRESHOLD} of {AUTHORITY.length} signer approvals. Links every step to a public
               explorer.
             </p>
           </div>
@@ -207,8 +207,8 @@ function Give({
           </div>
           <p className="note">
             {session.local
-              ? "Email sign-in is not switched on for this copy of the demo, so a throwaway test key is kept in this browser tab instead. Still no wallet app and no seed phrase."
-              : "No wallet app and no seed phrase. Your email stays with the sign-in provider and never goes on chain."}
+              ? "Email sign-in is disabled in this deployment. Uses a throwaway test key held in this browser tab. Requires no wallet app or seed phrase."
+              : "Requires no wallet app or seed phrase. The email address stays with the sign-in provider and is never written on chain."}
           </p>
         </div>
       </section>
@@ -235,14 +235,14 @@ function Give({
         <ol className="setup" role="status">
           <li className={phase === "wallet" ? "active" : "done"}>
             {phase === "wallet" ? <Spinner size={24} /> : <DoneIcon />}
-            <p>Creating your wallet. There is nothing to write down.</p>
+            <p>Creates a wallet for this session. Requires nothing to write down.</p>
           </li>
           {phase === "account" && (
             <li className="active">
               <Spinner size={24} />
               <p>
-                Opening your test account and adding {formatTchf(GRANT * STROOPS)} test francs. The
-                demo pays every network fee, so you never handle crypto.
+                Opening a test account and funding it with {formatTchf(GRANT * STROOPS)} tCHF. The demo
+                pays all network fees; the donor handles no crypto.
               </p>
             </li>
           )}
@@ -264,7 +264,7 @@ function Give({
       </div>
       {contribution && (
         <p className="panel">
-          You have already given in this demo.{" "}
+          A donation from this account is already recorded.{" "}
           <ExplorerLink href={explorer.tx(contribution)}>See your donation</ExplorerLink>
         </p>
       )}
@@ -281,7 +281,9 @@ function Give({
             </button>
           )}
         </div>
-        {phase === "giving" && <Status>Sending to the zakat pool on Stellar testnet.</Status>}
+        {phase === "giving" && (
+          <Status>Sending {formatTchf(DONATION * STROOPS)} tCHF to the zakat pool on Stellar testnet.</Status>
+        )}
       </div>
     </section>
   );
@@ -315,11 +317,11 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
   return (
     <section className="card">
       <div className="card-head">
-        <h1>See it split</h1>
+        <h1>Split</h1>
         <p className="lede">
-          The pool split your {DONATION} tCHF across the eight categories the moment it arrived. The
-          rule is fixed in the contract, and the contract refuses any split that does not add up to
-          exactly what was given.
+          Splits the {formatTchf(DONATION * STROOPS)} tCHF donation across the eight categories on
+          arrival. The split rule is fixed in the contract. The contract rejects any split that does
+          not sum to the amount given.
         </p>
       </div>
 
@@ -377,7 +379,7 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
         <ErrorBox title="Donation not readable.">{error}</ErrorBox>
       ) : (
         <div className="stack">
-          <Status>Reading your donation from the ledger.</Status>
+          <Status>Reading the donation from the ledger.</Status>
           <div className="skeleton" aria-hidden="true">
             {CATEGORIES.map((c) => (
               <div className="split-row" key={c.name}>
@@ -395,14 +397,14 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
       )}
 
       <Note>
-        Your gift is read from the event the contract recorded for your transaction; the pool column
-        is read live from contract state. The percentages are a demo placeholder, not the
-        Foundation&apos;s allocation, and have not been set by its Shariah authority.{" "}
+        Your gift: read from the Contribution event recorded for this transaction. Pool now holds:
+        read live from contract state. Percentages: demo placeholders, not the Foundation&apos;s
+        allocation, not set by its Shariah authority.{" "}
         <ExplorerLink href={explorer.tx(contribution)}>Your donation on Stellar Expert</ExplorerLink>
       </Note>
       <div className="actions">
         <button className="btn" onClick={onNext} disabled={!mine}>
-          Next: release a payout
+          Next: Release
         </button>
       </div>
     </section>
@@ -426,7 +428,7 @@ function Release({
 }) {
   const [busy, setBusy] = useState<"approved" | "refused" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const category = CATEGORIES[PAYOUT_CATEGORY].name.toLowerCase();
+  const category = shareFor(PAYOUT_CATEGORY);
 
   const run = async (withApproval: boolean) => {
     setError(null);
@@ -443,11 +445,11 @@ function Release({
   return (
     <section className="card">
       <div className="card-head">
-        <h1>See it released</h1>
+        <h1>Release</h1>
         <p className="lede">
-          A vetted partner organisation is paid {formatTchf(PAYOUT * STROOPS)} tCHF from {category}.
-          The pool pays only if {THRESHOLD} of the {AUTHORITY.length} eligibility signers have
-          approved that exact payout: this recipient, this category, this amount, once.
+          Pays {formatTchf(PAYOUT * STROOPS)} tCHF from {category} to a vetted partner organisation.
+          Requires approval from {THRESHOLD} of {AUTHORITY.length} eligibility signers for that exact
+          payout: recipient, category, amount, single use.
         </p>
       </div>
 
@@ -474,7 +476,7 @@ function Release({
             </button>
           )}
         </div>
-        {busy && <Status>Submitting to Stellar testnet. This takes a few seconds.</Status>}
+        {busy && <Status>Submitting to Stellar testnet. Takes up to 30 seconds.</Status>}
       </div>
 
       {error && <ErrorBox title="Request not completed.">{error}</ErrorBox>}
@@ -498,14 +500,14 @@ function Release({
                 Paid
               </span>
               <p>
-                <strong>{formatTchf(BigInt(approved.amount))} tCHF</strong> was paid from{" "}
-                {CATEGORIES[approved.category].name.toLowerCase()} to the partner organisation,
-                approved by {THRESHOLD} of {AUTHORITY.length} signers.
+                <strong>{formatTchf(BigInt(approved.amount))} tCHF</strong> paid from{" "}
+                {shareFor(approved.category)} to the partner organisation. Approved by {THRESHOLD} of{" "}
+                {AUTHORITY.length} signers.
               </p>
               {approved.attestationHash && (
                 <p className="small">
-                  Approval fingerprint <Hash value={approved.attestationHash} />. The approval
-                  itself stays off chain; this hash ties the payout to it.
+                  Approval fingerprint: <Hash value={approved.attestationHash} />. Hash of the
+                  off-chain approval; ties this payout to it.
                 </p>
               )}
               <ExplorerLink href={explorer.tx(approved.hash)}>The payout on Stellar Expert</ExplorerLink>
@@ -521,13 +523,13 @@ function Release({
                 Refused by the pool
               </span>
               <p>
-                <strong>The same payout, with no approval attached.</strong>{" "}
+                <strong>Same payout, no approval attached.</strong>{" "}
                 {POOL_ERRORS[refused.error?.code ?? 12]?.plain ?? refused.error?.detail}
               </p>
               <p className="small">
-                The contract returned <code>{POOL_ERRORS[refused.error?.code ?? 12]?.name}</code> and
-                nothing moved. It was sent to the network on purpose, so the refusal is a public
-                failed transaction rather than our word for it.
+                Contract error: <code>{POOL_ERRORS[refused.error?.code ?? 12]?.name}</code>. No funds
+                moved. Submitted to the network on purpose, so the refusal is a public failed
+                transaction, not a claim.
               </p>
               <ExplorerLink href={explorer.tx(refused.hash)}>
                 The refused attempt on Stellar Expert
@@ -538,13 +540,13 @@ function Release({
       )}
 
       <Note>
-        In this demo one server holds the distributor key and two of the signer keys, so the whole
-        flow runs in a minute. The contract enforces the separation either way; in the pilot they are
-        different organisations.
+        Demo setup: one server holds the distributor key and two signer keys, so the flow completes
+        in about a minute. The contract enforces the separation regardless. In the pilot, each key
+        belongs to a different organisation.
       </Note>
       <div className="actions">
         <button className="btn" onClick={onNext} disabled={!approved && !refused}>
-          Next: check it yourself
+          Next: Check
         </button>
       </div>
     </section>
@@ -670,10 +672,10 @@ function Check({ progress }: { progress: Progress }) {
   return (
     <section className="card">
       <div className="card-head">
-        <h1>Check it</h1>
+        <h1>Check</h1>
         <p className="lede">
-          Your receipt lists every step with a link to its transaction on Stellar Expert, a public
-          explorer we do not run. You do not have to trust this page, or us.
+          Lists every step of this donation, each linked to its transaction on Stellar Expert, a
+          public explorer not run by CipherPhi. Requires no trust in this page or its operators.
         </p>
       </div>
       <div className="actions">
@@ -723,8 +725,8 @@ function Check({ progress }: { progress: Progress }) {
         </button>
       </div>
       <Note>
-        The receipt is a public page: anyone with the link can open it, without signing in. It holds
-        transaction hashes only.
+        Public page. Opens for anyone with the link, without sign-in. Contains transaction hashes
+        only.
       </Note>
     </section>
   );

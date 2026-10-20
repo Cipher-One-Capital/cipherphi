@@ -181,7 +181,7 @@ export const POOL_ERRORS: Record<number, { name: string; plain: string }> = {
   11: { name: "UnknownSigner", plain: "A signature came from a key that is not an eligibility signer." },
   12: {
     name: "ThresholdNotMet",
-    plain: "Fewer than 2 of the 3 eligibility signers approved this payout, so the pool refused to move the money.",
+    plain: "Refused by the pool: fewer than 2 of 3 eligibility signers approved it.",
   },
   13: { name: "InsufficientBucket", plain: "That category does not hold enough to pay this out." },
   14: { name: "Insolvent", plain: "The pool would owe more than it holds." },

@@ -29,12 +29,17 @@ import {
  */
 
 async function postJson<T>(base: string, path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${base}${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const json = await res.json();
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("The demo server did not respond. Check the connection and try again.");
+  }
+  const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error ?? `${path} failed (${res.status})`);
   return json as T;
 }
