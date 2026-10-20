@@ -1101,6 +1101,11 @@ code {
   .step-narrow {
     display: block;
   }
+  /* 48 px tall to the touch, drawn in the canvas's 32 px of space. */
+  .step-hit {
+    height: 48px;
+    margin: -8px 0;
+  }
   .step-of {
     display: block;
     margin: 6px 0 0;

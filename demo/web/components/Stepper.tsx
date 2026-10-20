@@ -56,12 +56,11 @@ export function Stepper({
                     <StepIcon state={s} />
                   </button>
                 ) : (
-                  <span
-                    className="step-hit"
-                    aria-current={s === "current" ? "step" : undefined}
-                    aria-label={`${label}, ${name}, ${s === "current" ? "current step" : "not reached yet"}`}
-                  >
+                  <span className="step-hit" aria-current={s === "current" ? "step" : undefined}>
                     <StepIcon state={s} />
+                    <span className="sr-only">
+                      {label}, {name}, {s === "current" ? "current step" : "not reached yet"}
+                    </span>
                   </span>
                 )}
               </div>
