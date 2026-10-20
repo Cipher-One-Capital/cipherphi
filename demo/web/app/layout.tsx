@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const sans = Space_Grotesk({
+const sans = DM_Sans({
   subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600"],
   variable: "--font-sans",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     "Zakat rules enforced before money moves. Give test francs, see the split across the eight categories, watch a payout released only with approval, and check it all on a public explorer.",
 };
 
-export const viewport: Viewport = { themeColor: "#fbfaf6" };
+export const viewport: Viewport = { themeColor: "#f2f2f2" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

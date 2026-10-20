@@ -1,24 +1,26 @@
-/* CipherPhi demo. The mark, one primary (ink), one neutral (cream), one
-   typeface (Space Grotesk), taken from swissislamicfinance.com. Lime belongs to
-   the mark and appears nowhere else. Every other tone below is ink at an
-   opacity, not a new colour. */
+/* CipherPhi demo. Colour, type and spacing come from tokens.css, the design
+   handoff's cipherphi-tokens.css copied unchanged; the names below map the
+   build's older variables onto those tokens. */
+
+@import "./tokens.css";
 
 :root {
   color-scheme: light;
-  --ink: #101820;
-  --cream: #fbfaf6;
-  --lime: #bdff1d;
+  --cp-font: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 
-  --surface: #ffffff;
-  --ink-70: rgba(16, 24, 32, 0.72);
-  --ink-55: rgba(16, 24, 32, 0.58);
-  --ink-12: rgba(16, 24, 32, 0.12);
-  --ink-06: rgba(16, 24, 32, 0.06);
-  --ink-03: rgba(16, 24, 32, 0.03);
+  --ink: var(--cp-ink);
+  --cream: var(--cp-ground);
+  --lime: var(--cp-lime);
+  --surface: var(--cp-surface);
+  --ink-70: var(--cp-ink-2);
+  --ink-55: var(--cp-ink-2);
+  --ink-12: var(--cp-rule);
+  --ink-06: rgba(14, 14, 18, 0.06);
+  --ink-03: var(--cp-panel);
 
-  --radius: 14px;
-  --radius-sm: 9px;
-  --gutter: 16px;
+  --radius: var(--cp-r-card);
+  --radius-sm: var(--cp-r-inner);
+  --gutter: var(--cp-4);
 }
 
 * {
@@ -30,7 +32,7 @@ body {
   margin: 0;
   background: var(--cream);
   color: var(--ink);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--cp-font);
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
