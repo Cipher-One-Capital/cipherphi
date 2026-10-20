@@ -24,7 +24,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <div className="page">
           <p className="banner" role="note">
-            <strong>Testnet demo.</strong> Test tokens only, no real money. The contracts are
+            <strong>Testnet demo.</strong> Uses test tokens only; no real money moves. Contracts are
             unaudited.
           </p>
           <Providers>{children}</Providers>

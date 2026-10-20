@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExplorerLink, Header } from "@/components/Header";
+import { Stepper } from "@/components/Stepper";
 import { CATEGORIES } from "@/lib/categories";
 import {
   type ReleaseResult,
@@ -31,8 +32,6 @@ type Progress = {
   approved?: ReleaseResult;
   refused?: ReleaseResult;
 };
-
-const STEPS = ["Give", "See it split", "See it released", "Check it"] as const;
 
 /** Per-visitor progress, so a reload mid-demo picks up where it left off. */
 function load(key: string | null): Progress {
@@ -95,24 +94,7 @@ export default function Demo() {
         )}
       </Header>
 
-      <ol className="steps" aria-label="Demo steps">
-        {STEPS.map((label, i) => {
-          const state = i === step ? "current" : i <= furthest ? "done" : "";
-          const canGo = i <= furthest && i !== step;
-          return (
-            <li key={label} className={state} aria-current={i === step ? "step" : undefined}>
-              <b>Step {i + 1}</b>
-              {canGo ? (
-                <button className="linkish" onClick={() => setStep(i)}>
-                  {label}
-                </button>
-              ) : (
-                label
-              )}
-            </li>
-          );
-        })}
-      </ol>
+      <Stepper step={step} furthest={furthest} onGo={setStep} />
 
       {step === 0 && (
         <Give

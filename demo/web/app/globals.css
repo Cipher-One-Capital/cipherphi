@@ -51,21 +51,31 @@ a {
 
 .shell {
   width: 100%;
-  max-width: 760px;
+  max-width: calc(var(--cp-column) + 2 * var(--cp-6));
   margin: 0 auto;
-  padding: 0 var(--gutter);
-  flex: 1;
+  padding: 0 var(--cp-6) 72px;
+  flex: 1 0 auto;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 /* --- banner and header ---------------------------------------------------- */
 
 .banner {
   margin: 0;
-  background: var(--ink);
-  color: var(--cream);
-  font-size: 13.5px;
+  background: var(--cp-ink);
+  color: var(--cp-surface);
+  font: var(--cp-meta);
+  line-height: 18px;
   text-align: center;
-  padding: 8px var(--gutter);
+  padding: 10px var(--cp-4);
 }
 .banner strong {
   font-weight: 600;
@@ -75,66 +85,131 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 20px 0 8px;
-  flex-wrap: wrap;
+  gap: var(--cp-4);
+  padding-top: var(--cp-7);
 }
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
+  display: block;
+  flex: none;
+  border-radius: 4px;
 }
-.brand-name {
-  font-size: 21px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+.brand img {
+  display: block;
+  height: 24px;
+  width: auto;
 }
 .who {
-  font-size: 13px;
-  color: var(--ink-55);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--cp-4);
   min-width: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--cp-ink-2);
 }
 .who span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 240px;
+  max-width: 260px;
+}
+.who .linkish {
+  color: var(--cp-ink);
+  padding: 12px 0;
+  white-space: nowrap;
 }
 
 /* --- stepper -------------------------------------------------------------- */
 
-.steps {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin: 16px 0 24px;
+.stepper {
+  padding-top: var(--cp-6);
+}
+.shell > section:first-of-type,
+.stepper + * {
+  margin-top: var(--cp-7);
+}
+.stepper ol {
+  margin: 0;
   padding: 0;
   list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--cp-4);
 }
-.steps li {
-  border-top: 3px solid var(--ink-12);
-  padding-top: 8px;
-  font-size: 13px;
-  color: var(--ink-55);
+.stepper li {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
 }
-.steps li.done,
-.steps li.current {
-  border-top-color: var(--ink);
-  color: var(--ink);
+.stepper .bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--cp-ink);
+  transition: background-color 150ms;
 }
-.steps li.current {
+.stepper li.current .bar {
+  background: var(--cp-lime);
+}
+.stepper li.todo .bar {
+  height: 2px;
+  margin-bottom: 1px;
+  background: #d4d4d9;
+}
+.step-wide {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.step-icon {
+  flex: none;
+}
+.step-wide .step-icon {
+  margin-top: 7px;
+}
+.step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 20px;
+}
+.step-label {
+  font: var(--cp-label);
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cp-ink-2);
+}
+.stepper li.current [aria-current] {
   font-weight: 600;
 }
-.steps b {
-  display: block;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.stepper li.todo .step-text > span:last-child {
+  color: var(--cp-ink-2);
+}
+.stepper .linkish {
+  text-align: left;
+}
+.step-narrow,
+.step-of {
+  display: none;
+}
+.step-hit {
+  display: inline-flex;
+  width: 44px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  border-radius: var(--cp-r-chip);
+  cursor: pointer;
+}
+span.step-hit {
+  cursor: default;
 }
 
 /* --- cards ---------------------------------------------------------------- */
@@ -476,23 +551,80 @@ a {
 /* --- footer --------------------------------------------------------------- */
 
 .footer {
-  border-top: 1px solid var(--ink-12);
-  margin-top: 32px;
-  padding: 20px var(--gutter) 28px;
+  border-top: var(--cp-border);
+  padding: var(--cp-7) var(--cp-6) 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   text-align: center;
-  font-size: 13.5px;
-  color: var(--ink-70);
+  font: var(--cp-meta);
 }
 .footer p {
   margin: 0;
 }
 .footer .small {
-  margin-top: 6px;
-  font-size: 12.5px;
-  color: var(--ink-55);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--cp-ink-2);
 }
 
-@media (max-width: 560px) {
+@media (max-width: 600px) {
+  .shell {
+    padding: 0 var(--cp-4) var(--cp-8);
+  }
+  .header {
+    padding-top: var(--cp-4);
+    gap: var(--cp-3);
+  }
+  .brand img {
+    height: 20px;
+  }
+  .who {
+    gap: var(--cp-3);
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .who .linkish {
+    padding: 13px 0;
+  }
+  .stepper {
+    padding-top: var(--cp-4);
+  }
+  .shell > section:first-of-type,
+  .stepper + * {
+    margin-top: var(--cp-5);
+  }
+  .stepper ol {
+    gap: 6px;
+  }
+  .stepper li {
+    gap: var(--cp-2);
+    align-items: center;
+  }
+  .stepper .bar {
+    align-self: stretch;
+  }
+  .step-wide {
+    display: none;
+  }
+  .step-narrow {
+    display: block;
+  }
+  .step-of {
+    display: block;
+    margin: 6px 0 0;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .step-of span {
+    color: var(--cp-ink-2);
+  }
+  .step-of strong {
+    font-weight: 600;
+  }
+  .footer {
+    padding: var(--cp-6) var(--cp-4) var(--cp-8);
+  }
   .card {
     padding: 18px;
   }
@@ -507,9 +639,6 @@ a {
   }
   .hide-sm {
     display: none;
-  }
-  .steps li {
-    font-size: 12px;
   }
   .btn {
     width: 100%;
