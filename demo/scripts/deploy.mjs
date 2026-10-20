@@ -11,7 +11,7 @@
 //   6. Seed the pool with one contribution, so a payout has something to draw on
 //      even before the first visitor arrives.
 //
-// Writes deployment.json (public, committed) and .secrets.json (testnet secret
+// Writes deployment.json and web/lib/deployment.json (public, committed) and .secrets.json (testnet secret
 // keys, gitignored). Run `npm run build:wasm` first.
 //
 // Testnet only. The passphrase is pinned below and there is no flag to change it.
@@ -202,6 +202,8 @@ async function main() {
     deployedAt: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
   };
   writeFileSync(DEPLOYMENT, JSON.stringify(deployment, null, 2) + "\n");
+  // The web app reads its own copy, so it deploys without the rest of demo/.
+  writeFileSync(join(DEMO_DIR, "web", "lib", "deployment.json"), JSON.stringify(deployment, null, 2) + "\n");
   console.log(`wrote deployment.json (pool ${pool}, wasm ${wasmHash})`);
 }
 
