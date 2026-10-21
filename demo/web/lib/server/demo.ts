@@ -28,7 +28,6 @@ import {
   PARTNER,
   PAYOUT,
   PAYOUT_CATEGORY,
-  type ReleaseStage,
   POOL,
   ASSET_CONTRACT,
   STROOPS,
@@ -329,13 +328,8 @@ export type Release = {
  * the refusal is a failed transaction anyone can look up, not a claim the UI
  * makes.
  */
-export async function release(
-  contributionHash: string,
-  approved: boolean,
-  onStage: (stage: ReleaseStage) => void = () => {},
-): Promise<Release> {
+export async function release(contributionHash: string, approved: boolean): Promise<Release> {
   if (!/^[0-9a-f]{64}$/.test(contributionHash)) throw new DemoError("not a transaction hash");
-  onStage("check");
   await requireContribution(contributionHash);
 
   const marker = hash(Buffer.concat([
@@ -357,14 +351,12 @@ export async function release(
   if (signers[0].publicKey() !== AUTHORITY[0] || signers[1].publicKey() !== AUTHORITY[1]) {
     throw new DemoError("authority keys on the server do not match the deployment", 500);
   }
-  onStage("mark");
   await sendMarker(distributor, marker);
 
   // Attestations are consumed strictly in sequence. Two visitors releasing at
   // the same moment would sign for the same slot, so a lost race re-reads the
   // sequence and tries again.
   for (let attempt = 0; attempt < 4; attempt++) {
-    onStage("approve");
     const latest = await server.getLatestLedger();
     const sequence = await readSequence(server);
     const attestation = {
@@ -446,8 +438,7 @@ export async function release(
     }
     tx.sign(distributor);
 
-    onStage("submit");
-    const result = await sendAndWait(tx, undefined, () => onStage("confirm"));
+    const result = await sendAndWait(tx);
     if (!result.ok && poolErrorCode(result.detail) === 10 && approved) continue;
     // Another visitor's payout used the distributor's sequence number first:
     // a race on our side, not the pool's answer, so build it again.
@@ -535,7 +526,6 @@ async function droppedFromChannel(tx: Transaction): Promise<boolean> {
 async function sendAndWait(
   tx: Transaction | FeeBumpTransaction,
   dropped?: () => Promise<boolean>,
-  onAccepted?: () => void,
 ): Promise<{ hash: string; ok: boolean; detail: string }> {
   const server = rpcServer();
   const sent = await server.sendTransaction(tx);
@@ -543,7 +533,6 @@ async function sendAndWait(
     return { hash: sent.hash, ok: false, detail: describeResult(sent.errorResult) };
   }
   if (sent.status === "TRY_AGAIN_LATER") return { hash: sent.hash, ok: false, detail: "TRY_AGAIN_LATER" };
-  onAccepted?.();
   let final = await server.getTransaction(sent.hash);
   for (let i = 0; i < 30 && final.status === rpc.Api.GetTransactionStatus.NOT_FOUND; i++) {
     await new Promise((r) => setTimeout(r, 1000));
