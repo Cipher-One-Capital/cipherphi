@@ -327,14 +327,14 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
       </div>
 
       {mine && pool ? (
-        <div className="split" role="table" aria-label="Your gift by zakat category" ref={grow}>
+        <div className="split" role="table" aria-label="Your zakat by category" ref={grow}>
           <div className="split-row split-head" role="row">
             <span role="columnheader">Category</span>
             <span role="columnheader" className="wide">
               Share
             </span>
             <span role="columnheader" className="num">
-              Your gift
+              Your zakat
             </span>
             <span role="columnheader" className="num wide">
               Pool now holds
@@ -401,7 +401,7 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
       )}
 
       <Note>
-        Your gift: read from the Contribution event recorded for this transaction. Pool now holds:
+        Your zakat: read from the Contribution event recorded for this transaction. Pool now holds:
         read live from contract state. Percentages: demo placeholders, not the Foundation&apos;s
         allocation, not set by its Shariah authority.{" "}
         <ExplorerLink href={explorer.tx(contribution)}>Your donation on Stellar Expert</ExplorerLink>
