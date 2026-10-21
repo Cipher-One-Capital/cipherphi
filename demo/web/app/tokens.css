@@ -1,0 +1,58 @@
+/* CipherPhi demo tokens, v1, 21 October 2026.
+   Source: brand sheet v0.1 (accepted 21 October 2026) and the demo screens canvas.
+   Change from the brand sheet: secondary text is #5C5C66, not #74747E,
+   because #74747E is 4.13:1 on the #F2F2F2 page ground (WCAG AA needs 4.5:1). */
+:root {
+  /* colour */
+  --cp-ink: #0E0E12;          /* text, lines, banner, Paid border */
+  --cp-ink-2: #5C5C66;        /* secondary text, Refused border; 6.61:1 on white, 5.90:1 on ground */
+  --cp-lime: #CCFE59;         /* primary fill only: buttons, tags, dots. Never text on white (1.17:1) */
+  --cp-lime-hover: #BEF23F;
+  --cp-ground: #F2F2F2;       /* page */
+  --cp-surface: #FFFFFF;      /* cards */
+  --cp-panel: #F7F7F8;        /* notes, chips, Refused card */
+  --cp-rule: rgba(14, 14, 18, 0.12);
+  --cp-rule-strong: rgba(14, 14, 18, 0.24);
+  --cp-disabled: #E6E6E9;     /* disabled fill; label stays --cp-ink-2 */
+  --cp-skeleton: #ECECEF;
+  --cp-muted-mark: #8A8A94;   /* not-reached ring, missing-transaction dot */
+  --cp-error: #9A3B2E;        /* 6.91:1 on white */
+  --cp-error-bg: #FFF5F2;
+
+  /* type */
+  --cp-font: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --cp-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; /* hashes and code only */
+  --cp-display: 600 40px/46px var(--cp-font);   /* landing headline; phone 30px/36px */
+  --cp-title: 600 32px/38px var(--cp-font);     /* step titles; phone 26px/32px */
+  --cp-lede: 400 18px/28px var(--cp-font);      /* phone 17px/26px */
+  --cp-body: 400 16px/24px var(--cp-font);
+  --cp-small: 400 14px/21px var(--cp-font);     /* notes, honesty panels */
+  --cp-meta: 400 13px/20px var(--cp-font);      /* timestamps, footer */
+  --cp-label: 600 12px/16px var(--cp-font);     /* uppercase, letter-spacing 0.08em */
+  --cp-figure: 600 56px/1 var(--cp-font);       /* balance; phone 44px; tabular-nums */
+
+  /* space */
+  --cp-1: 4px;  --cp-2: 8px;  --cp-3: 12px; --cp-4: 16px;
+  --cp-5: 20px; --cp-6: 24px; --cp-7: 28px; --cp-8: 40px;
+  --cp-column: 760px;         /* desktop content column */
+  --cp-card-pad: 40px;        /* phone: 24px 20px */
+
+  /* radius */
+  --cp-r-card: 16px;
+  --cp-r-outcome: 14px;
+  --cp-r-inner: 12px;
+  --cp-r-btn: 10px;
+  --cp-r-chip: 8px;
+  --cp-r-pill: 999px;
+
+  /* borders and focus */
+  --cp-border: 1px solid var(--cp-rule);
+  --cp-border-paid: 2px solid var(--cp-ink);
+  --cp-border-refused: 2px dashed var(--cp-ink-2);
+  --cp-focus: 0 0 0 3px var(--cp-lime), 0 0 0 4px var(--cp-ink); /* use with outline: 2px solid transparent */
+  --cp-btn-height: 52px;      /* never below 48px */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

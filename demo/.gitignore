@@ -1,0 +1,13 @@
+# Testnet keys written by scripts/deploy.mjs. Testnet only, and never committed.
+.secrets.json
+.env*.local
+
+# Scratch directories: extracted source, verifier workspace. Rebuilt on demand
+# from the committed archive.
+.build/
+.verify/
+out/
+node_modules/
+contract/target/
+contract/test_snapshots/
+design-check/

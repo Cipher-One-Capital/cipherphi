@@ -1,0 +1,80 @@
+import { expect, test } from "@playwright/test";
+
+const SHOTS = process.env.SHOTS;
+const shot = async (page: import("@playwright/test").Page, name: string) => {
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
+};
+
+test("give, see it split, see it released, check it", async ({ page }) => {
+  // The first-run tips have their own test; this one walks the flow without them.
+  await page.addInitScript(() => localStorage.setItem("cipherphi-demo:tips", "off"));
+  await page.goto("/");
+  // The disclaimer comes first, once per browser.
+  const disclaimer = page.getByRole("dialog", { name: "For testing only" });
+  await expect(disclaimer).toContainText("Nothing here moves real money.");
+  await disclaimer.getByRole("button", { name: "I understand" }).click();
+  await expect(disclaimer).toBeHidden();
+  await expect(page.getByRole("navigation", { name: "Demo steps" })).toHaveCount(0);
+  await shot(page, "0-landing");
+
+  // 1. Give
+  await page.getByRole("button", { name: /^Start$|Sign in/ }).click();
+  await expect(page.getByText("USDC (testnet)")).toBeVisible();
+  await expect(page.locator(".figure")).toContainText("10.00");
+  await shot(page, "1-give");
+  // The visitor picks a suggested amount; the button and the split follow it.
+  await page.getByRole("button", { name: "2.50 USDC", exact: true }).click();
+  await page.getByRole("button", { name: "Give 2.50 USDC as zakat" }).click();
+
+  // 2. Split
+  await expect(page.getByRole("heading", { name: "Split", exact: true })).toBeVisible();
+  await expect(page.locator(".split .split-row:not(.split-head):not(.split-total)")).toHaveCount(8);
+  await expect(page.locator(".split .split-total")).toContainText("2.50");
+  await page.waitForTimeout(900);
+  await shot(page, "2-split");
+  await page.getByRole("button", { name: "Next: Release" }).click();
+
+  // 3. Release
+  await page.getByRole("button", { name: "Release with approval" }).click();
+  await expect(page.locator(".outcome.paid")).toBeVisible();
+  await page.getByRole("button", { name: "Try it without approval" }).click();
+  const refused = page.locator(".outcome.refused");
+  await expect(refused).toBeVisible();
+  await expect(refused).toContainText("ThresholdNotMet");
+  await shot(page, "3-released");
+  await page.getByRole("button", { name: "Next: Check" }).click();
+
+  // 4. Check it
+  await page.getByRole("link", { name: "Open your receipt" }).click();
+  await expect(page.getByRole("heading", { name: "Receipt", exact: true })).toBeVisible();
+  await expect(page.getByText("received by the zakat pool")).toBeVisible();
+  await expect(page.getByText(/from the share for the poor to the partner organisation/)).toBeVisible();
+  await expect(page.getByText(/fewer than 2 of 3 eligibility signers/).first()).toBeVisible();
+  const links = page.locator('a[href^="https://stellar.expert/explorer/testnet/tx/"]');
+  expect(await links.count()).toBeGreaterThanOrEqual(4);
+  // With the tips off, reaching the receipt ends the demo: a closing message, once.
+  const end = page.getByRole("dialog", { name: "The demo has ended" });
+  await expect(end.getByRole("link", { name: /CipherPhi website/ })).toHaveAttribute("href", "https://www.cipherphi.ch");
+  await end.getByRole("button", { name: "Keep exploring" }).click();
+  await expect(end).toBeHidden();
+  await shot(page, "4-receipt");
+
+  // The receipt leads back to the demo, where the visitor can leave it and land on the first page.
+  await page.getByRole("link", { name: /Back to the demo/ }).first().click();
+  await expect(page.getByRole("heading", { name: "Demo complete" })).toBeVisible();
+  // Running it again keeps the wallet, which still holds 7.50: no new funding.
+  await page.getByRole("button", { name: "Run the demo again" }).click();
+  await expect(page.locator(".figure")).toContainText("7.50");
+  await expect(page.locator(".setup")).toHaveCount(0);
+  // Signing out asks first; staying keeps the visitor where they were.
+  const signOut = page.getByRole("dialog", { name: "Sign out?" });
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(signOut).toContainText("All your progress in this demo will be lost");
+  await signOut.getByRole("button", { name: "Stay signed in" }).click();
+  await expect(signOut).toBeHidden();
+  await expect(page.locator(".figure")).toContainText("7.50");
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOut.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("button", { name: /^Start$|Sign in/ })).toBeVisible();
+  await expect(disclaimer).toBeHidden();
+});

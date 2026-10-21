@@ -1,0 +1,18 @@
+{
+  "name": "cipherphi-demo-ops",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Build, deploy and verify the CipherPhi testnet demo pool.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "archive": "bash scripts/make-source-archive.sh",
+    "build:wasm": "bash scripts/build.sh",
+    "deploy": "node scripts/deploy.mjs",
+    "check": "node scripts/check-deployed-hash.mjs",
+    "verify:sep58": "bash scripts/verify.sh"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^16.2.0"
+  }
+}

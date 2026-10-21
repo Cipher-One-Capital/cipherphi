@@ -22,6 +22,12 @@ CipherPhi is composed of three main Soroban contracts:
 
 > Read the full design: [ARCHITECTURE.md](./ARCHITECTURE.md).
 
+## Testnet demo
+
+A clickable demo of give, split, release and check runs on Stellar testnet with Circle's testnet USDC: pool [`CD3DL4GTEFZMJUTZT4GXA5ZNPLFXNFYS4LHQQYU2ZKJ3DJJOJO6XISGU`](https://stellar.expert/explorer/testnet/contract/CD3DL4GTEFZMJUTZT4GXA5ZNPLFXNFYS4LHQQYU2ZKJ3DJJOJO6XISGU), Wasm hash `f498a9c5d440ddeee3da70f37b14f95044647b586a01c816a98c24d084072677`. It is unaudited and handles no real funds.
+
+> How it is built, and where it differs from the architecture: [demo/README.md](./demo/README.md).
+
 ## Revisions
 
 The architecture has been through three review cycles. The structure itself was never touched: the 3 contracts, the separated keys and the on-chain boundary are as first submitted. What each cycle changed is what the design was run against, security review and platform checks, and the corrections those found.
