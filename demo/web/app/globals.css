@@ -76,6 +76,119 @@ body {
   font-weight: 600;
 }
 
+/* First-run tips: one bubble under the thing to use next */
+.tip-anchor {
+  position: relative;
+}
+.tip-anchor.block {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+.tip-anchor.active {
+  z-index: 30;
+}
+.tip-anchor.active::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 2px solid var(--cp-lime);
+  border-radius: calc(var(--cp-r-btn) + 6px);
+  box-shadow: 0 0 0 2px var(--cp-ink);
+  pointer-events: none;
+  animation: tip-ring 1.6s ease-in-out infinite;
+}
+.tip {
+  position: absolute;
+  top: calc(100% + 16px);
+  left: 0;
+  width: min(360px, calc(100vw - 32px));
+  padding: var(--cp-5);
+  border-radius: var(--cp-r-outcome);
+  background: var(--cp-ink);
+  color: var(--cp-surface);
+  font-size: 15px;
+  line-height: 22px;
+  text-align: left;
+  box-shadow: 0 12px 32px rgba(14, 14, 18, 0.28);
+  animation: appear 200ms ease-out both;
+  cursor: auto;
+}
+.tip::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 24px;
+  width: 14px;
+  height: 14px;
+  background: var(--cp-ink);
+  transform: rotate(45deg);
+}
+.tip-anchor.center.active::before {
+  inset: 0;
+  border-radius: 0;
+}
+.tip-anchor.center > .tip {
+  left: 50%;
+  transform: translateX(-50%);
+}
+.tip-anchor.center > .tip::before {
+  left: calc(50% - 7px);
+}
+.tip p {
+  margin: 0;
+}
+.tip .tip-count {
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cp-lime);
+}
+.tip .tip-title {
+  margin: 2px 0 6px;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+}
+.tip-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--cp-4);
+  margin-top: var(--cp-4);
+}
+.tip .tip-ok {
+  width: auto;
+  min-height: 48px;
+}
+.tip .linkish {
+  color: var(--cp-surface);
+  min-height: 48px;
+}
+@keyframes tip-ring {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Receipt: the way back to the demo */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  margin-top: var(--cp-4);
+  color: var(--cp-ink);
+  font-weight: 500;
+  text-underline-offset: 3px;
+}
+.shell > .back + section:first-of-type {
+  margin-top: var(--cp-2);
+}
+.shell > .actions:last-child {
+  margin-top: var(--cp-6);
+}
+
 /* Live donations strip, under the banner */
 .live {
   display: flex;
@@ -1095,18 +1208,20 @@ code {
 }
 .points li {
   position: relative;
-  padding-left: 22px;
+  padding-left: 26px;
 }
+/* A plain tick, drawn as the two strokes of a rotated corner. */
 .points li::before {
   content: "";
   position: absolute;
-  left: 2px;
-  top: 0.62em;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--cp-lime);
-  box-shadow: 0 0 0 1.5px var(--cp-ink);
+  left: 5px;
+  top: 0.3em;
+  width: 6px;
+  height: 12px;
+  border: solid var(--cp-ink);
+  border-width: 0 2.25px 2.25px 0;
+  border-radius: 0 0 1px 0;
+  transform: rotate(45deg);
 }
 
 /* End of the demo */

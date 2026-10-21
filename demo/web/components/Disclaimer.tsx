@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { DISCLAIMER_CLOSED } from "./Tips";
 
 const SEEN = "cipherphi-demo:disclaimer";
 
@@ -24,6 +25,7 @@ export function Disclaimer() {
     try {
       localStorage.setItem(SEEN, "1");
     } catch {}
+    window.dispatchEvent(new Event(DISCLAIMER_CLOSED));
   };
 
   return (

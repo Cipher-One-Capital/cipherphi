@@ -21,6 +21,7 @@ async function glide(page: import("@playwright/test").Page, to: number) {
 
 test("recording", async ({ page }) => {
   test.setTimeout(300_000);
+  await page.addInitScript(() => localStorage.setItem("cipherphi-demo:tips", "off"));
   await page.goto("/");
   await hold(page, 4000);
   await page.getByRole("button", { name: "I understand" }).click();

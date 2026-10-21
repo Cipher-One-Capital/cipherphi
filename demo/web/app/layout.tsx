@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import { Disclaimer } from "@/components/Disclaimer";
 import { LiveDonations } from "@/components/LiveDonations";
+import { TipsProvider } from "@/components/Tips";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -24,14 +25,16 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={sans.variable}>
       <body>
-        <div className="page">
-          <p className="banner" role="note">
-            <strong>Testnet demo.</strong> Uses test tokens only; no real money moves. Contracts are
-            unaudited.
-          </p>
-          <LiveDonations />
-          <Providers>{children}</Providers>
-        </div>
+        <TipsProvider>
+          <div className="page">
+            <p className="banner" role="note">
+              <strong>Testnet demo.</strong> Uses test tokens only; no real money moves. Contracts are
+              unaudited.
+            </p>
+            <LiveDonations />
+            <Providers>{children}</Providers>
+          </div>
+        </TipsProvider>
         <Disclaimer />
       </body>
     </html>
