@@ -185,6 +185,9 @@ export function disbursementFromEvents(events: xdr.ContractEvent[]): {
 }
 
 /** The pool's contract error codes, in the words the demo shows a visitor. */
+/** The steps of a payout, in order, as the server reaches them. */
+export type ReleaseStage = "check" | "mark" | "approve" | "submit" | "confirm";
+
 export const POOL_ERRORS: Record<number, { name: string; plain: string }> = {
   2: { name: "InvalidAmount", plain: "The amount must be more than zero." },
   5: { name: "AttestationMismatch", plain: "The payout does not match what the approval was signed for." },
