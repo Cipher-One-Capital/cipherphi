@@ -339,8 +339,9 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
         <h1>Split</h1>
         <p className="lede">
           Splits the {formatTchf(DONATION * STROOPS)} tCHF donation across the eight categories on
-          arrival. The split rule is fixed in the contract. The contract rejects any split that does
-          not sum to the amount given.
+          arrival. Donors do not choose the split. In the pilot, the Foundation&apos;s Shariah
+          authority sets it; in this demo, it is fixed in the contract. The contract rejects any
+          split that does not sum to the amount given.
         </p>
       </div>
 
