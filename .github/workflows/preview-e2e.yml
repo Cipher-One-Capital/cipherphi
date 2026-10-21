@@ -1,29 +1,48 @@
 # Runs the demo's browser tests against each Vercel deployment once it is
 # ready: every PR preview, and production after a merge. The tests use live
 # Stellar testnet, through the deployment's own server and keys.
+#
+# Vercel announces a ready deployment with a repository_dispatch event, which
+# GitHub only acts on for workflows on the default branch. To test any URL by
+# hand, run this workflow from the Actions tab with that URL.
 name: Demo browser tests
 
-on: deployment_status
+on:
+  repository_dispatch:
+    types: [vercel.deployment.success]
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Deployment URL to test
+        required: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: demo-e2e-${{ github.event.client_payload.git.sha || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   e2e:
-    if: github.event.deployment_status.state == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
       run:
         working-directory: demo/web
     env:
-      BASE_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
       # Lets the tests through Vercel's login on preview deployments.
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.deployment.sha }}
+          ref: ${{ github.event.client_payload.git.sha || github.sha }}
+      - name: Deployment URL
+        run: |
+          url="${{ github.event.client_payload.url || inputs.url }}"
+          case "$url" in http*) ;; *) url="https://$url" ;; esac
+          echo "BASE_URL=$url" >> "$GITHUB_ENV"
+          echo "Testing $url (${{ github.event.client_payload.environment || 'manual' }})"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
