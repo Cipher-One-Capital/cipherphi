@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useMemo, useR
 import { TIPS, type TipId } from "@/lib/tips";
 
 const SEEN = "cipherphi-demo:tips";
+const DONE = "cipherphi-demo:tips-done";
 const OFF = "off";
 const DISCLAIMER = "cipherphi-demo:disclaimer";
 /** Fired by the disclaimer when it closes, so the first tip can follow it. */
@@ -92,8 +93,67 @@ export function TipsProvider({ children }: { children: React.ReactNode }) {
     return TIPS.find(due)?.id ?? null;
   }, [state, mounted]);
 
+  // Every tip seen: once, a closing message hands the demo over.
+  const finished = state.ready && !state.off && TIPS.every((t) => state.seen.includes(t.id));
+  const replay = useCallback(() => {
+    write("[]");
+    setState((s) => ({ ...s, seen: [] }));
+  }, []);
+
   const value = useMemo(() => ({ active, mount, dismiss, skip }), [active, mount, dismiss, skip]);
-  return <TipsContext.Provider value={value}>{children}</TipsContext.Provider>;
+  return (
+    <TipsContext.Provider value={value}>
+      {children}
+      {finished && <TipsDone onReplay={replay} />}
+    </TipsContext.Provider>
+  );
+}
+
+/** The closing message after the last tip, shown once per browser. */
+function TipsDone({ onReplay }: { onReplay: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    let done = false;
+    try {
+      done = localStorage.getItem(DONE) === "1";
+    } catch {}
+    if (!done) ref.current?.showModal();
+  }, []);
+  const remember = () => {
+    try {
+      localStorage.setItem(DONE, "1");
+    } catch {}
+  };
+  return (
+    <dialog ref={ref} className="disclaimer" aria-labelledby="tips-done-title" onClose={remember}>
+      <h2 id="tips-done-title">Your turn</h2>
+      <p>That is the whole tour. The demo is yours to explore now:</p>
+      <ul>
+        <li>Run it again with what is left in your test wallet, in any amount.</li>
+        <li>Open your receipt and check each step on Stellar Expert.</li>
+        <li>Watch the live strip as other donations land.</li>
+      </ul>
+      <p className="disclaimer-foot">Everything runs on testnet. Nothing here moves real money.</p>
+      <form method="dialog" className="dialog-actions">
+        {/* Saved on the click too: the dialog's close event comes a moment
+            later, after a quick reload could already have happened. */}
+        <button className="btn" autoFocus onClick={remember}>
+          Start exploring
+        </button>
+        <button
+          className="linkish"
+          onClick={() => {
+            try {
+              localStorage.removeItem(DONE);
+            } catch {}
+            onReplay();
+          }}
+        >
+          Replay the tips
+        </button>
+      </form>
+    </dialog>
+  );
 }
 
 /** Wraps the thing a tip points at. Using it counts as reading the tip. */
@@ -117,14 +177,47 @@ export function Tip({
   const label = useId();
   const button = useRef<HTMLButtonElement>(null);
   const anchor = useRef<HTMLDivElement>(null);
+  const bubble = useRef<HTMLDivElement>(null);
   // "Got it" hands focus back to the thing the tip pointed at, not to the page.
   const gotIt = () => {
     tips?.dismiss(id);
     anchor.current?.querySelector<HTMLElement>("button:not([disabled]), a[href]")?.focus();
   };
 
+  // Keep the tip and what it points at on screen, scrolling only as far as
+  // needed, and again if the page shifts or resizes while it is open.
   useEffect(() => {
-    if (open) button.current?.focus({ preventScroll: true });
+    if (!open) return;
+    button.current?.focus({ preventScroll: true });
+    const reveal = () => {
+      const a = anchor.current?.getBoundingClientRect();
+      const b = bubble.current?.getBoundingClientRect();
+      if (!a || !b) return;
+      const h = window.innerHeight;
+      const top = Math.min(a.top, b.top) - 16;
+      const bottom = Math.max(a.bottom, b.bottom) + 16;
+      let dy: number;
+      if (bottom - top <= h) {
+        // Both fit: scroll just enough to show them together.
+        dy = bottom > h ? bottom - h : top < 0 ? top : 0;
+      } else {
+        // A tall target, like the split table: the tip itself comes first.
+        dy = b.bottom + 16 > h ? b.bottom + 16 - h : b.top - 16 < 0 ? b.top - 16 : 0;
+      }
+      if (Math.abs(dy) < 1) return;
+      const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollBy({ top: dy, behavior: still ? "auto" : "smooth" });
+    };
+    reveal();
+    const watch = new ResizeObserver(reveal);
+    if (anchor.current) watch.observe(anchor.current);
+    // Content loading above the target moves it without resizing it.
+    watch.observe(document.body);
+    window.addEventListener("resize", reveal);
+    return () => {
+      watch.disconnect();
+      window.removeEventListener("resize", reveal);
+    };
   }, [open]);
 
   const index = TIPS.findIndex((t) => t.id === id);
@@ -141,6 +234,7 @@ export function Tip({
       {children}
       {open && (
         <div
+          ref={bubble}
           className="tip"
           role="dialog"
           aria-modal="false"

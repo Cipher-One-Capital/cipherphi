@@ -58,7 +58,8 @@ async function check(page: Page, screen: string) {
       if (!e || e === document.body || e.closest("nextjs-portal")) return null;
       if (e.dataset.a11ySeen) return "again";
       e.dataset.a11ySeen = "1";
-      const cs = getComputedStyle(e);
+      // A text field shows the ring on its frame, not on the bare input.
+      const cs = getComputedStyle(e.closest(".amount-input") ?? e);
       return {
         name: (e.textContent || e.getAttribute("aria-label") || e.tagName).trim().slice(0, 40),
         ring: cs.boxShadow.includes("255, 255, 255") && cs.boxShadow.includes("14, 14, 18"),
@@ -125,9 +126,9 @@ test("every screen", async ({ page }) => {
     await page.goto("/");
     await page.evaluate(() => sessionStorage.clear());
     await page.goto("/");
-    await expect(page.getByRole("button", { name: /Start with a test wallet|Sign in/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Start$|Sign in/ })).toBeVisible();
     await check(page, `${tag} landing`);
-    await page.getByRole("button", { name: /Start with a test wallet|Sign in/ }).click();
+    await page.getByRole("button", { name: /^Start$|Sign in/ }).click();
     await expect(page.getByRole("button", { name: /as zakat/ })).toBeVisible({ timeout: 90_000 });
     await check(page, `${tag} ready`);
     await page.getByRole("button", { name: /as zakat/ }).click();

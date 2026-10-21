@@ -8,7 +8,7 @@
 import { Keypair } from "@stellar/stellar-sdk";
 import { privySigner } from "../lib/signing/privy";
 import { donate, onboard, readBalances, readSplit, requestRelease, tokenBalance } from "../lib/donate";
-import { GRANT, POOL_ERRORS, STROOPS, explorer, formatAmount } from "../lib/stellar";
+import { DONATION, GRANT, POOL_ERRORS, STROOPS, explorer, formatAmount } from "../lib/stellar";
 
 const base = process.env.BASE ?? "http://localhost:3000";
 const visitor = Keypair.random();
@@ -38,7 +38,7 @@ console.log("second onboarding refused as already ready: ok");
 
 step("give: donate");
 const before = await readBalances();
-const donation = await donate(signer, base);
+const donation = await donate(signer, DONATION * STROOPS, base);
 console.log("donated", explorer.tx(donation));
 
 step("see it split");

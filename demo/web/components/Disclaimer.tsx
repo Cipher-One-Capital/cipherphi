@@ -42,7 +42,7 @@ export function Disclaimer() {
         <li>No personal data is written on chain.</li>
       </ul>
       <form method="dialog">
-        <button className="btn" autoFocus>
+        <button className="btn" autoFocus onClick={remember}>
           I understand
         </button>
       </form>

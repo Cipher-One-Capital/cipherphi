@@ -22,7 +22,6 @@ import {
   ASSET_ISSUER,
   AUTHORITY,
   DISTRIBUTOR,
-  DONATION,
   GRANT,
   HORIZON_URL,
   NETWORK_PASSPHRASE,
@@ -458,7 +457,7 @@ async function requireContribution(txHash: string) {
   }
   const contribution = contributionFromEvents(tx.events?.contractEventsXdr?.flat() ?? []);
   if (!contribution) throw new DemoError("that transaction is not a donation to this pool");
-  if (contribution.amount > DONATION * STROOPS * 2n) throw new DemoError("not a demo donation");
+  if (contribution.amount > GRANT * STROOPS) throw new DemoError("not a demo donation");
 }
 
 async function markerExists(marker: Buffer): Promise<boolean> {

@@ -18,16 +18,18 @@ test("give, see it split, see it released, check it", async ({ page }) => {
   await shot(page, "0-landing");
 
   // 1. Give
-  await page.getByRole("button", { name: /Sign in with your email|Start with a test wallet/ }).click();
+  await page.getByRole("button", { name: /^Start$|Sign in/ }).click();
   await expect(page.getByText("USDC (testnet)")).toBeVisible();
   await expect(page.locator(".figure")).toContainText("10.00");
   await shot(page, "1-give");
-  await page.getByRole("button", { name: /Give 5 USDC/ }).click();
+  // The visitor picks a suggested amount; the button and the split follow it.
+  await page.getByRole("button", { name: "2.50 USDC", exact: true }).click();
+  await page.getByRole("button", { name: "Give 2.50 USDC as zakat" }).click();
 
   // 2. Split
   await expect(page.getByRole("heading", { name: "Split", exact: true })).toBeVisible();
   await expect(page.locator(".split .split-row:not(.split-head):not(.split-total)")).toHaveCount(8);
-  await expect(page.locator(".split .split-total")).toContainText("5.00");
+  await expect(page.locator(".split .split-total")).toContainText("2.50");
   await page.waitForTimeout(900);
   await shot(page, "2-split");
   await page.getByRole("button", { name: "Next: Release" }).click();
@@ -55,7 +57,11 @@ test("give, see it split, see it released, check it", async ({ page }) => {
   // The receipt leads back to the demo, where the visitor can leave it and land on the first page.
   await page.getByRole("link", { name: /Back to the demo/ }).first().click();
   await expect(page.getByRole("heading", { name: "Demo complete" })).toBeVisible();
-  await page.getByRole("button", { name: "Back to the start" }).click();
-  await expect(page.getByRole("button", { name: /Sign in with your email|Start with a test wallet/ })).toBeVisible();
+  // Running it again keeps the wallet, which still holds 7.50: no new funding.
+  await page.getByRole("button", { name: "Run the demo again" }).click();
+  await expect(page.locator(".figure")).toContainText("7.50");
+  await expect(page.locator(".setup")).toHaveCount(0);
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("button", { name: /^Start$|Sign in/ })).toBeVisible();
   await expect(disclaimer).toBeHidden();
 });

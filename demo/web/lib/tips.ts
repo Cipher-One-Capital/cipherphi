@@ -6,11 +6,6 @@
  */
 export const TIPS: readonly { id: string; title: string; body: string; after?: string }[] = [
   {
-    id: "start",
-    title: "Start here",
-    body: "Creates a throwaway test wallet in this browser tab. A real donor signs in with an email instead; the demo skips that so anyone can try it in seconds.",
-  },
-  {
     id: "setup",
     title: "Setting you up",
     body: "Opens a Stellar testnet account for you and funds it with 10 test USDC. The demo pays every network fee, so you never touch crypto. Pilot donors bring their own USDC.",
@@ -21,14 +16,19 @@ export const TIPS: readonly { id: string; title: string; body: string; after?: s
     body: "Read live from the ledger, not from this page. Test USDC has no value, so you can give it away freely.",
   },
   {
+    id: "amount",
+    title: "Choose your zakat",
+    body: "Tap a suggested amount or type your own, up to your test balance. Any amount works: the contract splits whatever arrives.",
+  },
+  {
     id: "give",
     title: "Give your zakat",
-    body: "Sends 5 USDC to the zakat pool contract. From here the contract decides what happens to it, not CipherPhi. Takes up to 30 seconds on testnet.",
+    body: "Sends your zakat to the zakat pool contract. From here the contract decides what happens to it, not CipherPhi. Takes up to 30 seconds on testnet.",
   },
   {
     id: "split",
     title: "Where your zakat went",
-    body: "The contract divided your gift across the eight zakat categories of Qur'an 9:60 the moment it arrived. These numbers come from the record the contract wrote, so nobody can edit them afterwards.",
+    body: "The contract divided your zakat across the eight zakat categories of Qur'an 9:60 the moment it arrived. These numbers come from the record the contract wrote, so nobody can edit them afterwards.",
   },
   {
     id: "split-note",

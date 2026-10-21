@@ -62,13 +62,13 @@ test("disclaimer", async ({ page }) => {
 
 test("visitor who releases first", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: /Start with a test wallet|Sign in/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Start$|Sign in/ })).toBeVisible();
   await shoot(page, "1b-landing-test-wallet");
 
   // 1d: hold the onboarding request so the setup lines stay up.
   const onboard = hold(page, "**/api/onboard");
   await onboard.start();
-  await page.getByRole("button", { name: /Start with a test wallet|Sign in/ }).click();
+  await page.getByRole("button", { name: /^Start$|Sign in/ }).click();
   await expect(page.locator(".setup li")).toHaveCount(2);
   await shoot(page, "1d-setup");
   await onboard.release();
@@ -162,13 +162,13 @@ test("visitor who releases first", async ({ page }) => {
   await page.goBack();
   await page.goBack();
   await page.getByRole("button", { name: "Back to the start" }).click();
-  await expect(page.getByRole("button", { name: /Start with a test wallet|Sign in/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Start$|Sign in/ })).toBeVisible();
   await shoot(page, "6-back-to-start");
 });
 
 test("visitor who tries without approval first", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: /Start with a test wallet|Sign in/ }).click();
+  await page.getByRole("button", { name: /^Start$|Sign in/ }).click();
   await page.getByRole("button", { name: /as zakat/ }).click({ timeout: 90_000 });
   await page.getByRole("button", { name: /^Next/ }).click({ timeout: 90_000 });
   await page.getByRole("button", { name: "Try it without approval" }).click();

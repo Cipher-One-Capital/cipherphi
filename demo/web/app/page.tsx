@@ -18,6 +18,8 @@ import {
 } from "@/lib/donate";
 import {
   DONATION,
+  SUGGESTED,
+  parseAmount,
   GRANT,
   PAYOUT,
   PAYOUT_CATEGORY,
@@ -98,7 +100,16 @@ export default function Demo() {
     setStep(0);
     setSeen(0);
   };
+  // Again: the same test wallet while it still holds test USDC, so the
+  // treasury funds no one twice; a new one only when it is empty.
   const again = async () => {
+    const left = session.address ? await tokenBalance(session.address) : 0n;
+    if (left > 0n) {
+      update({ contribution: undefined, approved: undefined, refused: undefined });
+      setStep(0);
+      setSeen(0);
+      return;
+    }
     await restart();
     await session.connect();
   };
@@ -164,6 +175,7 @@ function Give({
   const [giving, setGiving] = useState(false);
   const [balance, setBalance] = useState<bigint | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [amountText, setAmountText] = useState(String(DONATION));
   const walletRequested = useRef(false);
   const started = useRef<string | null>(null);
 
@@ -220,11 +232,9 @@ function Give({
         </div>
         <div className="stack">
           <div className="actions">
-            <Tip id="start">
-              <button className="btn" onClick={() => session.connect()}>
-                {session.local ? "Start with a test wallet" : "Sign in with your email"}
-              </button>
-            </Tip>
+            <button className="btn" onClick={() => session.connect()}>
+              {session.local ? "Start" : "Sign in with your email"}
+            </button>
           </div>
           <p className="note">
             {session.local
@@ -236,12 +246,15 @@ function Give({
     );
   }
 
+  const amount = parseAmount(amountText);
+  const amountOk = amount !== null && balance !== null && amount <= balance;
+
   const give = async () => {
-    if (!session.signer) return;
+    if (!session.signer || !amountOk) return;
     setError(null);
     setGiving(true);
     try {
-      onDonated(await donate(session.signer));
+      onDonated(await donate(session.signer, amount));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -293,6 +306,45 @@ function Give({
           <ExplorerLink href={explorer.tx(contribution)}>See your donation</ExplorerLink>
         </p>
       )}
+      {!contribution && balance !== null && (
+        <Tip id="amount" block>
+          <fieldset className="amount" disabled={phase === "giving"}>
+            <legend className="label">Your zakat</legend>
+            <div className="picks">
+              {SUGGESTED.filter((s) => parseAmount(s)! <= balance).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className={amountText === s ? "pick on" : "pick"}
+                  aria-pressed={amountText === s}
+                  onClick={() => setAmountText(s)}
+                >
+                  {formatAmount(parseAmount(s)!)} USDC
+                </button>
+              ))}
+            </div>
+            <label className="amount-field">
+              <span>Or type an amount</span>
+              <span className="amount-input">
+                <input
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={amountText}
+                  onChange={(e) => setAmountText(e.target.value)}
+                  aria-invalid={!amountOk}
+                  aria-describedby="amount-hint"
+                />
+                <span aria-hidden="true">USDC</span>
+              </span>
+            </label>
+            <p id="amount-hint" className={amountOk ? "note" : "note invalid"}>
+              {amountOk
+                ? `Any amount up to your balance of ${formatAmount(balance)} USDC.`
+                : `Enter an amount above 0.00, with at most two decimals, up to your balance of ${formatAmount(balance)} USDC.`}
+            </p>
+          </fieldset>
+        </Tip>
+      )}
       {error && <ErrorBox title="Transaction not sent.">{error}</ErrorBox>}
       <div className="stack">
         <div className="actions">
@@ -302,14 +354,20 @@ function Give({
             </button>
           ) : (
             <Tip id="give">
-              <button className="btn" onClick={give} disabled={phase === "giving"}>
-                {phase === "giving" ? <Busy>Giving…</Busy> : `Give ${DONATION} USDC as zakat`}
+              <button className="btn" onClick={give} disabled={phase === "giving" || !amountOk}>
+                {phase === "giving" ? (
+                  <Busy>Giving…</Busy>
+                ) : amountOk ? (
+                  `Give ${formatAmount(amount)} USDC as zakat`
+                ) : (
+                  "Give as zakat"
+                )}
               </button>
             </Tip>
           )}
         </div>
-        {phase === "giving" && (
-          <Status>Sending {formatAmount(DONATION * STROOPS)} USDC to the zakat pool on Stellar testnet.</Status>
+        {phase === "giving" && amount !== null && (
+          <Status>Sending {formatAmount(amount)} USDC to the zakat pool on Stellar testnet.</Status>
         )}
       </div>
     </section>
@@ -347,8 +405,8 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
       <div className="card-head">
         <h1>Split</h1>
         <p className="lede">
-          Splits the {formatAmount(DONATION * STROOPS)} USDC donation across the eight categories on
-          arrival. Donors do not choose the split. In the pilot, the Foundation&apos;s Shariah
+          Splits {mine ? `the ${formatAmount(total)} USDC donation` : "the donation"} across the eight
+          categories on arrival. Donors do not choose the split. In the pilot, the Foundation&apos;s Shariah
           authority sets it; in this demo, it is fixed in the contract. The contract rejects any
           split that does not sum to the amount given.
         </p>
@@ -790,7 +848,7 @@ function Check({
         <h2>Demo complete</h2>
         <p className="note">
           {local
-            ? "Runs the four steps again with a new test wallet, or signs out and returns to the first page. Keep the receipt link first: it is the only way back to this donation."
+            ? "Runs the four steps again with the test USDC left in this wallet, or a new wallet once it is empty. Or signs out and returns to the first page. Keep the receipt link first: it is the only way back to this donation."
             : "Signs out and returns to the first page. Keep the receipt link first: it is the only way back to this donation from another device."}
         </p>
         <div className="actions">

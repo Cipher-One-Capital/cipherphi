@@ -12,7 +12,6 @@ import type { Signer } from "./signing/signer";
 import {
   ASSET_CODE,
   ASSET_ISSUER,
-  DONATION,
   HORIZON_URL,
   NETWORK_PASSPHRASE,
   POOL,
@@ -117,7 +116,7 @@ export async function tokenBalance(address: string): Promise<bigint> {
  * Donate the fixed amount. The visitor signs the call; the treasury wraps it
  * in a fee-bump and pays the fee, so the visitor's account never holds XLM.
  */
-export async function donate(signer: Signer, base = ""): Promise<string> {
+export async function donate(signer: Signer, stroops: bigint, base = ""): Promise<string> {
   const server = rpcServer();
   const account = await server.getAccount(signer.address);
   const tx = new TransactionBuilder(account, {
@@ -128,7 +127,7 @@ export async function donate(signer: Signer, base = ""): Promise<string> {
       new Contract(POOL).call(
         "contribute",
         new Address(signer.address).toScVal(),
-        nativeToScVal(DONATION * STROOPS, { type: "i128" }),
+        nativeToScVal(stroops, { type: "i128" }),
       ),
     )
     .setTimeout(120)

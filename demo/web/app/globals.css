@@ -1258,6 +1258,101 @@ code {
 .disclaimer .btn {
   width: 100%;
 }
+.disclaimer .disclaimer-foot {
+  margin-bottom: var(--cp-5);
+  color: var(--cp-ink-2);
+  font: var(--cp-small);
+}
+.dialog-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cp-2);
+}
+.dialog-actions .linkish {
+  min-height: 48px;
+}
+
+/* Give: choosing the amount */
+.amount {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cp-3);
+}
+.amount legend {
+  padding: 0;
+  margin-bottom: var(--cp-3);
+}
+.picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cp-2);
+}
+.pick {
+  appearance: none;
+  min-height: 48px;
+  padding: 0 var(--cp-4);
+  border: 1px solid var(--cp-rule-strong);
+  border-radius: var(--cp-r-btn);
+  background: var(--cp-surface);
+  color: var(--cp-ink);
+  font: inherit;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.pick:hover {
+  border-color: var(--cp-ink);
+}
+.pick.on {
+  background: var(--cp-lime);
+  border-color: transparent;
+  font-weight: 600;
+}
+.amount-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font: var(--cp-small);
+  color: var(--cp-ink-2);
+}
+.amount-input {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cp-2);
+  width: min(220px, 100%);
+  min-height: 48px;
+  padding: 0 var(--cp-4);
+  border: 1px solid var(--cp-rule-strong);
+  border-radius: var(--cp-r-btn);
+  background: var(--cp-surface);
+  color: var(--cp-ink);
+  font: var(--cp-body);
+}
+.amount-input:focus-within {
+  border-color: var(--cp-ink);
+  box-shadow: var(--cp-focus);
+}
+.amount-input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+}
+.amount-input:has(input[aria-invalid="true"]) {
+  border-color: var(--cp-error);
+}
+.note.invalid {
+  color: var(--cp-error);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .share-bar {
