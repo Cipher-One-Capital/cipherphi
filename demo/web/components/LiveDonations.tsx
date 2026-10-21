@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { scValToNative } from "@stellar/stellar-sdk";
-import { POOL, TREASURY, explorer, formatAmount, rpcServer } from "@/lib/stellar";
+import { BOT, POOL, TREASURY, explorer, formatAmount, rpcServer } from "@/lib/stellar";
 
-type Donation = { id: string; hash: string; amount: bigint; at: number };
+type Donation = { id: string; hash: string; amount: bigint; at: number; bot: boolean };
 
 /** How often the ledger is asked for new donations. */
 const POLL_MS = 6000;
@@ -16,7 +16,8 @@ const LOOKBACK = 17_280;
  * from the pool's Contribution events on testnet and refreshed every few
  * seconds. Shows the amount, when, and a link to the transaction; never the
  * donor's address. The treasury's seed contribution is left out, since it is
- * not a donation.
+ * not a donation. Gifts from the demo bot (scripts/bot.mjs) are labelled as
+ * such and counted apart, so they never pass for visitors' donations.
  */
 export function LiveDonations() {
   const [donations, setDonations] = useState<Donation[] | null>(null);
@@ -53,7 +54,13 @@ export function LiveDonations() {
           const [kind, contributor] = e.topic.map((t) => scValToNative(t));
           if (kind !== "contribution" || contributor === TREASURY) continue;
           const value = scValToNative(e.value) as { amount: bigint };
-          found.push({ id: e.id, hash: e.txHash, amount: value.amount, at: Date.parse(e.ledgerClosedAt) });
+          found.push({
+            id: e.id,
+            hash: e.txHash,
+            amount: value.amount,
+            at: Date.parse(e.ledgerClosedAt),
+            bot: contributor === BOT,
+          });
         }
         if (!stopped) {
           setDonations((prev) => {
@@ -80,6 +87,8 @@ export function LiveDonations() {
 
   if (donations === null) return null;
   const day = donations.filter((d) => now - d.at < 24 * 3600 * 1000);
+  const fromBot = day.filter((d) => d.bot).length;
+  const visitors = day.length - fromBot;
   const latest = donations[donations.length - 1];
 
   return (
@@ -89,14 +98,15 @@ export function LiveDonations() {
       {latest ? (
         <>
           <span key={latest.id} className={latest.id === fresh ? "live-item fresh" : "live-item"}>
-            <strong>{formatAmount(latest.amount)} USDC</strong> given to the zakat pool{" "}
-            {ago(now - latest.at)}.{" "}
+            <strong>{formatAmount(latest.amount)} USDC</strong>{" "}
+            {latest.bot ? "given by the demo bot" : "given to the zakat pool"} {ago(now - latest.at)}.{" "}
             <a href={explorer.tx(latest.hash)} target="_blank" rel="noreferrer">
               View<span className="sr-only"> this donation on Stellar Expert</span>
             </a>
           </span>
           <span className="live-count">
-            {day.length} {day.length === 1 ? "donation" : "donations"} in the last 24 hours
+            {visitors} {visitors === 1 ? "visitor donation" : "visitor donations"} in the last 24 hours
+            {fromBot > 0 && `, plus ${fromBot} from the demo bot`}
           </span>
         </>
       ) : (
