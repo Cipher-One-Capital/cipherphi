@@ -26,8 +26,16 @@ async function tip(page: Page, title: string) {
     }))
     .toBe(true);
   await expect(bubble.getByRole("button", { name: "Got it" })).toBeFocused();
-  // Measure contrast once the bubble has faded in, not halfway through.
-  await bubble.evaluate((e) => Promise.all(e.getAnimations().map((a) => a.finished)));
+  // Measure contrast once the bubble, and anything else sliding in (a new
+  // donation in the live strip), has finished animating, not halfway through.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+        .map((a) => a.finished),
+    ),
+  );
   const axe = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .exclude("nextjs-portal")
