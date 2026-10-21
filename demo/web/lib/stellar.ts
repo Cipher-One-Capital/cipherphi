@@ -34,6 +34,8 @@ export const ASSET_CONTRACT = deployment.asset.contractId;
 export const TREASURY = deployment.treasury;
 export const DISTRIBUTOR = deployment.distributor;
 export const PARTNER = deployment.partner;
+/** The demo bot's account: its gifts are labelled, never shown as visitors'. */
+export const BOT = deployment.bot;
 export const AUTHORITY = deployment.authority;
 export const THRESHOLD = deployment.threshold;
 

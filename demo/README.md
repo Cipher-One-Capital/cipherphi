@@ -52,6 +52,10 @@ This is a demonstration, not the funded build. The differences are deliberate, a
 
 Each visitor costs the treasury 10 USDC. Circle's faucet sends only 20 USDC per request, so the treasury buys its USDC on the testnet exchange instead, which has a large XLM/USDC pool. `node scripts/top-up.mjs 5000` opens a throwaway account from friendbot, swaps its test XLM for 5000 USDC paid straight to the treasury, and merges the rest of its XLM into the treasury too. That funds 500 visitors. When the treasury runs low, onboarding stops with "The demo has run out of test USDC" until the next top-up.
 
+## The demo bot
+
+`npm run bot` (in `demo/`) gives to the pool from its own account every 1 to 3 minutes for an hour, in amounts from 5 to 50 USDC, so the live strip has something to show during a partner call. Start it before the call and stop it with Ctrl-C. `--minutes`, `--min` and `--max` (seconds between gifts) change the pace. Its address is `bot` in `deployment.json`, and the strip labels its gifts "given by the demo bot" and counts them apart from visitors' donations. It buys its own test USDC on the testnet exchange when it runs low.
+
 ## Run it
 
 ```bash

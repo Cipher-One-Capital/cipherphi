@@ -59,6 +59,7 @@ const ROLES = [
   "authority1",
   "authority2",
   "partner", // the vetted partner organisation's testnet account
+  "bot", // gives labelled demo donations during calls (scripts/bot.mjs)
 ];
 
 function loadKeys() {
@@ -191,6 +192,7 @@ async function main() {
     treasury: keys.treasury.publicKey(),
     distributor: keys.distributor.publicKey(),
     partner: keys.partner.publicKey(),
+    bot: keys.bot.publicKey(),
     authority: [keys.authority0, keys.authority1, keys.authority2].map((k) => k.publicKey()),
     threshold: THRESHOLD,
     sep58: sep58Fields(),
