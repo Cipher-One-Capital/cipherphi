@@ -39,7 +39,7 @@ export const TIPS: readonly { id: string; title: string; body: string; after?: s
     id: "live",
     after: "split",
     title: "Live donations",
-    body: "Shows each donation to the pool as it lands on testnet, yours included. Gifts from the demo bot are labelled, so they never pass for visitors.",
+    body: "Shows each donation to the pool as it lands on testnet, yours included.",
   },
   {
     id: "roles",

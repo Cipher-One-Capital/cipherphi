@@ -10,7 +10,6 @@
     "build:wasm": "bash scripts/build.sh",
     "deploy": "node scripts/deploy.mjs",
     "check": "node scripts/check-deployed-hash.mjs",
-    "bot": "node scripts/bot.mjs",
     "verify:sep58": "bash scripts/verify.sh"
   },
   "dependencies": {
