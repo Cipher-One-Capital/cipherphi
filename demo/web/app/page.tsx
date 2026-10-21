@@ -9,7 +9,6 @@ import { Stepper } from "@/components/Stepper";
 import { CATEGORIES, shareFor } from "@/lib/categories";
 import {
   type DonateStage,
-  type OnboardStage,
   type ReleaseResult,
   donate,
   onboard,
@@ -29,12 +28,11 @@ import {
   STROOPS,
   THRESHOLD,
   AUTHORITY,
-  type ReleaseStage,
   explorer,
   formatAmount,
 } from "@/lib/stellar";
 import { useSession } from "@/lib/wallet/session";
-import { Busy, CheckIcon, ErrorBox, Events, Hash, Note, Rolling, Spent, upTo } from "@/components/ui";
+import { Busy, CheckIcon, DoneIcon, ErrorBox, Hash, Note, Spent, Spinner, Status } from "@/components/ui";
 
 type Progress = {
   contribution?: string;
@@ -205,7 +203,6 @@ function Give({
   const [balance, setBalance] = useState<bigint | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [amountText, setAmountText] = useState(String(DONATION));
-  const [setup, setSetup] = useState<OnboardStage | "balance" | null>(null);
   const walletRequested = useRef(false);
   const started = useRef<string | null>(null);
 
@@ -221,11 +218,8 @@ function Give({
     if (!session.signer || started.current === session.address) return;
     started.current = session.address;
     const address = session.address;
-    onboard(session.signer, "", setSetup)
-      .then(() => {
-        setSetup("balance");
-        return tokenBalance(address);
-      })
+    onboard(session.signer)
+      .then(() => tokenBalance(address))
       .then(setBalance)
       .catch((e) => setError(e.message));
   }, [session]);
@@ -241,7 +235,7 @@ function Give({
   if (!session.ready) {
     return (
       <section className="card">
-        <Events items={[{ key: "load", text: "Loading the demo", done: false }]} />
+        <Status>Loading…</Status>
       </section>
     );
   }
@@ -301,9 +295,21 @@ function Give({
       <section className="card">
         <h1 className="sr-only">Give</h1>
         <Tip id="setup" block>
-          <Events
-            items={upTo(SETUP_EVENTS, phase === "wallet" ? "wallet" : (setup ?? "build"))}
-          />
+          <ol className="setup" aria-live="polite">
+            <li className={phase === "wallet" ? "active" : "done"}>
+              {phase === "wallet" ? <Spinner size={24} /> : <DoneIcon />}
+              <p>Creates a wallet for this session. Requires nothing to write down.</p>
+            </li>
+            {phase === "account" && (
+              <li className="active">
+                <Spinner size={24} />
+                <p>
+                  Opening a test account and funding it with {formatAmount(GRANT * STROOPS)} testnet USDC. The demo
+                  pays all network fees; the donor handles no crypto.
+                </p>
+              </li>
+            )}
+          </ol>
         </Tip>
         {error && <ErrorBox title="Account not opened.">{error}</ErrorBox>}
       </section>
@@ -317,9 +323,7 @@ function Give({
         <div className="balance">
           <span className="label">Test balance</span>
           <p className="figure">
-            <span>
-              <Rolling value={balance ?? 0n} delay={150} />
-            </span>
+            <span>{formatAmount(balance ?? 0n)}</span>
             <small>USDC (testnet)</small>
           </p>
         </div>
@@ -390,29 +394,36 @@ function Give({
             </Tip>
           )}
         </div>
-        {phase === "giving" && stage && <Events items={upTo(GIVE_EVENTS, stage)} />}
+        {phase === "giving" && stage && <GiveEvents stage={stage} />}
       </div>
     </section>
   );
 }
 
-const SETUP_EVENTS: { key: OnboardStage | "wallet" | "balance"; text: string }[] = [
-  { key: "wallet", text: "Creating a wallet for this session, with nothing to write down" },
-  { key: "build", text: "Preparing a Stellar testnet account for you, sponsored by the demo" },
-  { key: "sign", text: "Signing the account opening with your wallet" },
-  {
-    key: "submit",
-    text: `Opening the account and funding it with ${formatAmount(GRANT * STROOPS)} test USDC, then waiting for the ledger to confirm`,
-  },
-  { key: "balance", text: "Reading your balance from the ledger" },
+const GIVE_EVENTS: { stage: DonateStage; text: string }[] = [
+  { stage: "check", text: "Checking the donation against the zakat pool contract" },
+  { stage: "sign", text: "Signing it with your wallet" },
+  { stage: "submit", text: "Submitting it to Stellar testnet, with the fee paid by the demo" },
+  { stage: "confirm", text: "Waiting for the next ledger to confirm it, about 5 seconds" },
 ];
 
-const GIVE_EVENTS: { key: DonateStage; text: string }[] = [
-  { key: "check", text: "Checking the donation against the zakat pool contract" },
-  { key: "sign", text: "Signing it with your wallet" },
-  { key: "submit", text: "Submitting it to Stellar testnet, with the fee paid by the demo" },
-  { key: "confirm", text: "Waiting for the next ledger to confirm it, about 5 seconds" },
-];
+/** What the donation is doing, one line per step as it starts. The button carries the spinner. */
+function GiveEvents({ stage }: { stage: DonateStage }) {
+  const current = GIVE_EVENTS.findIndex((e) => e.stage === stage);
+  return (
+    <ol className="events" aria-live="polite">
+      {GIVE_EVENTS.slice(0, current + 1).map((e, i) => (
+        <li key={e.stage} className={i < current ? "done" : "active"}>
+          {i < current ? <CheckIcon /> : <span className="event-dot" aria-hidden="true" />}
+          <span>
+            {e.text}
+            {i < current ? "" : "…"}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 // --- 2. Split ----------------------------------------------------------------
 
@@ -423,16 +434,14 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
 
   useEffect(() => {
     let live = true;
-    const fail = (e: Error) => live && setError(e.message);
-    readSplit(contribution)
-      .then((split) => {
+    Promise.all([readSplit(contribution), readBalances()])
+      .then(([split, balances]) => {
+        if (!live) return;
         if (!split) throw new Error("The donation's split is not readable yet. Try again in a moment.");
-        if (live) setMine(split.split);
+        setMine(split.split);
+        setPool(balances);
       })
-      .catch(fail);
-    readBalances()
-      .then((balances) => live && setPool(balances))
-      .catch(fail);
+      .catch((e) => live && setError(e.message));
     return () => {
       live = false;
     };
@@ -459,11 +468,14 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
           <div className="split" role="table" aria-label="Your zakat by category" ref={grow}>
             <div className="split-row split-head" role="row">
               <span role="columnheader">Category</span>
-              <span role="columnheader" className="num gift">
+              <span role="columnheader" className="wide">
+                Share
+              </span>
+              <span role="columnheader" className="num">
                 Your zakat
               </span>
-              <span role="columnheader" className="num pool">
-                Zakat pool
+              <span role="columnheader" className="num wide">
+                Pool now holds
               </span>
             </div>
             {CATEGORIES.map((c, i) => {
@@ -478,39 +490,30 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
                     <span className="cat-sub">
                       {c.arabic} · {c.share / 100}%
                     </span>
-                    <i className="share-bar" aria-hidden="true" />
+                    <i className="share-bar narrow" aria-hidden="true" />
+                  </div>
+                  <div role="cell" className="wide" aria-label={`${c.share / 100}%`}>
+                    <i className="share-bar" />
                   </div>
                   <span role="cell" className="num gift">
                     {formatAmount(mine[i])}
                   </span>
-                  <span role="cell" className="num pool">
-                    <Rolling value={pool[i]} from={pool[i] - mine[i]} delay={400 + i * 60} />
-                    <span className="added">
-                      +{formatAmount(mine[i])}
-                      <span className="sr-only"> from your zakat</span>
-                    </span>
+                  <span role="cell" className="num pool wide">
+                    {formatAmount(pool[i])}
                   </span>
                 </div>
               );
             })}
             <div className="split-row split-total" role="row">
-              <div role="rowheader" className="cat">
-                <span>Total</span>
-                <span className="cat-sub">100%</span>
-              </div>
-              <span role="cell" className="num gift">
+              <span role="rowheader">Total</span>
+              <span role="cell" className="cat-sub wide">
+                100%
+              </span>
+              <span role="cell" className="num">
                 {formatAmount(total)}
               </span>
-              <span role="cell" className="num pool">
-                <Rolling
-                  value={pool.reduce((a, b) => a + b, 0n)}
-                  from={pool.reduce((a, b) => a + b, 0n) - total}
-                  delay={400 + CATEGORIES.length * 60}
-                />
-                <span className="added">
-                  +{formatAmount(total)}
-                  <span className="sr-only"> from your zakat</span>
-                </span>
+              <span role="cell" className="num wide">
+                {formatAmount(pool.reduce((a, b) => a + b, 0n))}
               </span>
             </div>
           </div>
@@ -519,27 +522,17 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
         <ErrorBox title="Donation not readable.">{error}</ErrorBox>
       ) : (
         <div className="stack">
-          <Events
-            items={[
-              { key: "split", text: "Reading your zakat's split from the donation's transaction", done: !!mine },
-              { key: "pool", text: "Reading the pool's balances from the contract", done: !!pool },
-            ]}
-          />
+          <Status>Reading the donation from the ledger.</Status>
           <div className="skeleton" aria-hidden="true">
             {CATEGORIES.map((c) => (
               <div className="split-row" key={c.name}>
                 <div className="cat">
                   <i style={{ width: "60%", height: 12 }} />
                   <i style={{ width: "40%", height: 10 }} />
-                  <i style={{ width: `${(c.share / top) * 80}%`, height: 8 }} />
                 </div>
-                <div className="num gift">
-                  <i style={{ width: 48, height: 12 }} />
-                </div>
-                <div className="num pool">
-                  <i style={{ width: 56, height: 12 }} />
-                  <i style={{ width: 40, height: 10 }} />
-                </div>
+                <i className="wide" style={{ width: `${(c.share / top) * 80}%`, height: 10 }} />
+                <i className="num" style={{ width: 48, height: 12 }} />
+                <i className="wide" />
               </div>
             ))}
           </div>
@@ -548,8 +541,8 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
 
       <Tip id="split-note" block>
         <Note>
-          Your zakat: read from the Contribution event recorded for this transaction. Zakat pool:
-          read live from contract state, with your zakat in green. Percentages: demo placeholders, not the Foundation&apos;s
+          Your zakat: read from the Contribution event recorded for this transaction. Pool now holds:
+          read live from contract state. Percentages: demo placeholders, not the Foundation&apos;s
           allocation, not set by its Shariah authority.{" "}
           <ExplorerLink href={explorer.tx(contribution)}>Your donation on Stellar Expert</ExplorerLink>
         </Note>
@@ -565,23 +558,6 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
 
 // --- 3. Release --------------------------------------------------------------
 
-const RELEASE_STAGES: ReleaseStage[] = ["check", "mark", "approve", "submit", "confirm"];
-
-function releaseEvents(approved: boolean): { key: ReleaseStage; text: string }[] {
-  return [
-    { key: "check", text: "Checking your donation, and that this payout has not run before" },
-    { key: "mark", text: "Recording a single-use marker on the ledger, so the payout can run only once" },
-    {
-      key: "approve",
-      text: approved
-        ? `Collecting ${THRESHOLD} of ${AUTHORITY.length} eligibility signatures for this exact payout`
-        : "Leaving out the eligibility signatures",
-    },
-    { key: "submit", text: "Submitting the payout to the zakat pool contract" },
-    { key: "confirm", text: "Waiting for the next ledger while the contract checks the approvals" },
-  ];
-}
-
 function Release({
   contribution,
   approved,
@@ -596,7 +572,6 @@ function Release({
   onNext: () => void;
 }) {
   const [busy, setBusy] = useState<"approved" | "refused" | null>(null);
-  const [stage, setStage] = useState<ReleaseStage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const category = shareFor(PAYOUT_CATEGORY);
 
@@ -604,18 +579,11 @@ function Release({
     setError(null);
     setBusy(withApproval ? "approved" : "refused");
     try {
-      // A retried step can be reported again: the list only moves forward.
-      const at = (s: ReleaseStage) => RELEASE_STAGES.indexOf(s);
-      onResult(
-        await requestRelease(contribution, withApproval, "", (next) =>
-          setStage((now) => (now && at(now) > at(next) ? now : next)),
-        ),
-      );
+      onResult(await requestRelease(contribution, withApproval));
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(null);
-      setStage(null);
     }
   };
 
@@ -659,7 +627,7 @@ function Release({
             </Tip>
           )}
         </div>
-        {busy && <Events items={upTo(releaseEvents(busy === "approved"), stage ?? "check")} />}
+        {busy && <Status>Submitting to Stellar testnet. Takes up to 30 seconds.</Status>}
       </div>
 
       {error && <ErrorBox title="Request not completed.">{error}</ErrorBox>}

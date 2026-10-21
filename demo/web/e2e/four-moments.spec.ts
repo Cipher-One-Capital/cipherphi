@@ -52,9 +52,9 @@ test("give, see it split, see it released, check it", async ({ page }) => {
   await expect(page.getByText(/fewer than 2 of 3 eligibility signers/).first()).toBeVisible();
   const links = page.locator('a[href^="https://stellar.expert/explorer/testnet/tx/"]');
   expect(await links.count()).toBeGreaterThanOrEqual(4);
-  // Opening their own receipt ends the demo: a closing message, once.
-  const end = page.getByRole("dialog", { name: "Demo complete" });
-  await expect(end.getByRole("link", { name: /cipherphi\.ch/ })).toHaveAttribute("href", "https://www.cipherphi.ch");
+  // With the tips off, reaching the receipt ends the demo: a closing message, once.
+  const end = page.getByRole("dialog", { name: "The demo has ended" });
+  await expect(end.getByRole("link", { name: /CipherPhi website/ })).toHaveAttribute("href", "https://www.cipherphi.ch");
   await end.getByRole("button", { name: "Keep exploring" }).click();
   await expect(end).toBeHidden();
   await shot(page, "4-receipt");
@@ -65,7 +65,7 @@ test("give, see it split, see it released, check it", async ({ page }) => {
   // Running it again keeps the wallet, which still holds 7.50: no new funding.
   await page.getByRole("button", { name: "Run the demo again" }).click();
   await expect(page.locator(".figure")).toContainText("7.50");
-  await expect(page.getByText(/^Creating a wallet/)).toHaveCount(0);
+  await expect(page.locator(".setup")).toHaveCount(0);
   // Signing out asks first; staying keeps the visitor where they were.
   const signOut = page.getByRole("dialog", { name: "Sign out?" });
   await page.getByRole("button", { name: "Sign out" }).click();
