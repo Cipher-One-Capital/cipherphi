@@ -74,6 +74,7 @@ BASE=http://localhost:3100 npm run check:flow   # the four moments via the API, 
 npx playwright test e2e/four-moments.spec.ts    # the four moments in a browser
 DESIGN_CHECK=../design-check npx playwright test e2e/states.spec.ts  # every screen state, 1280 and 375 px
 npx playwright test e2e/a11y.spec.ts            # axe, keyboard focus ring, 48 px buttons
+npx playwright test e2e/tips.spec.ts            # a first visit with the tips on, tip by tip
 ```
 
 `deploy.mjs` writes `deployment.json` and its copy in `web/lib/`, both public and committed, and `.secrets.json`, which holds the testnet keys and is gitignored.
