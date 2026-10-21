@@ -52,6 +52,13 @@ This is a demonstration, not the funded build. The differences are deliberate, a
 
 Each visitor costs the treasury 10 USDC. Circle's faucet sends only 20 USDC per request, so the treasury buys its USDC on the testnet exchange instead, which has a large XLM/USDC pool. `node scripts/top-up.mjs 5000` opens a throwaway account from friendbot, swaps its test XLM for 5000 USDC paid straight to the treasury, and merges the rest of its XLM into the treasury too. That funds 500 visitors. When the treasury runs low, onboarding stops with "The demo has run out of test USDC" until the next top-up.
 
+## Vercel
+
+The site is the Vercel project for `demo/web`. Production deploys from `main`; every pull request gets a preview link.
+
+- **Environment variables**, ticked for both Production and Preview: `TREASURY_SECRET`, `DISTRIBUTOR_SECRET`, `AUTHORITY_SECRET_0`, `AUTHORITY_SECRET_1` (testnet keys from `.secrets.json`), and `NEXT_PUBLIC_DEMO_LOCAL_WALLET=1` or `NEXT_PUBLIC_PRIVY_APP_ID`. Previews share the production treasury and pool, which is fine on testnet.
+- **Browser tests on every deployment.** `.github/workflows/preview-e2e.yml` runs the four-moments and tips tests against each deployment once Vercel reports it ready. Previews sit behind Vercel's login, so the workflow needs the GitHub secret `VERCEL_AUTOMATION_BYPASS_SECRET`, copied from the project's Settings → Deployment Protection → Protection Bypass for Automation. The same variable lets a local run reach a preview: `BASE_URL=<preview url> VERCEL_AUTOMATION_BYPASS_SECRET=… npx playwright test e2e/four-moments.spec.ts`.
+
 ## Run it
 
 ```bash

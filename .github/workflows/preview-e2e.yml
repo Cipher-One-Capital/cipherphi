@@ -1,0 +1,41 @@
+# Runs the demo's browser tests against each Vercel deployment once it is
+# ready: every PR preview, and production after a merge. The tests use live
+# Stellar testnet, through the deployment's own server and keys.
+name: Demo browser tests
+
+on: deployment_status
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: demo/web
+    env:
+      BASE_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+      # Lets the tests through Vercel's login on preview deployments.
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.deployment.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: demo/web/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Four moments, then a first visit with tips
+        run: npx playwright test e2e/four-moments.spec.ts e2e/tips.spec.ts --workers=1 --retries=1
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: demo/web/test-results
+          retention-days: 7
