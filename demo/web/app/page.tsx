@@ -109,7 +109,6 @@ export default function Demo() {
       <Header>
         {session.connected && (
           <div className="who">
-            <span>{session.label}</span>
             <button className="linkish" onClick={restart}>
               Sign out
             </button>
@@ -754,7 +753,7 @@ function Check({
           {copied ? (
             <>
               <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-                <circle cx="9" cy="9" r="8" fill="var(--cp-lime)" stroke="var(--cp-ink)" strokeWidth="1.2" />
+                <circle cx="9" cy="9" r="8" fill="var(--cp-lime)" />
                 <path
                   d="M5.5 9.3l2.3 2.3 4.7-5"
                   fill="none"

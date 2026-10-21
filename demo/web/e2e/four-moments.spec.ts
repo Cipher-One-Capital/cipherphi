@@ -14,7 +14,6 @@ test("give, see it split, see it released, check it", async ({ page }) => {
   await expect(disclaimer).toContainText("Nothing here moves real money.");
   await disclaimer.getByRole("button", { name: "I understand" }).click();
   await expect(disclaimer).toBeHidden();
-  await expect(page.getByText("Testnet demo.")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Demo steps" })).toHaveCount(0);
   await shot(page, "0-landing");
 

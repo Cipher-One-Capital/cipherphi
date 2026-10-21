@@ -8,7 +8,7 @@ const SEEN = "cipherphi-demo:disclaimer";
 /**
  * Shown once per browser, on whichever page a visitor opens first. A native
  * modal dialog, so focus stays inside it and Escape closes it. Closing it any
- * way counts as read; the banner above every page repeats the short version.
+ * way counts as read.
  */
 export function Disclaimer() {
   const ref = useRef<HTMLDialogElement>(null);

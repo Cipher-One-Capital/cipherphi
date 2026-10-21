@@ -61,7 +61,7 @@ async function check(page: Page, screen: string) {
       const cs = getComputedStyle(e);
       return {
         name: (e.textContent || e.getAttribute("aria-label") || e.tagName).trim().slice(0, 40),
-        ring: cs.boxShadow.includes("204, 254, 89") && cs.boxShadow.includes("14, 14, 18"),
+        ring: cs.boxShadow.includes("255, 255, 255") && cs.boxShadow.includes("14, 14, 18"),
       };
     });
     if (!f) continue;
