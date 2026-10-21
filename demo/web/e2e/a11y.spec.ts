@@ -9,6 +9,11 @@ import { expect, test, type Page } from "@playwright/test";
  *
  *   npx playwright test e2e/a11y.spec.ts
  */
+// The disclaimer is captured on its own; every other screen starts past it.
+test.beforeEach(async ({ page }, info) => {
+  if (info.title === "disclaimer") return;
+  await page.addInitScript(() => localStorage.setItem("cipherphi-demo:disclaimer", "1"));
+});
 test.setTimeout(400_000);
 
 type Report = { screen: string; violations: string[]; unreachable: string[]; noRing: string[]; short: string[] };
@@ -74,6 +79,38 @@ async function check(page: Page, screen: string) {
   );
   reports.push({ screen, violations, unreachable, noRing, short });
 }
+
+test("disclaimer", async ({ page }) => {
+  for (const size of [
+    { width: 1280, height: 860 },
+    { width: 375, height: 812 },
+  ]) {
+    await page.setViewportSize(size);
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    const dialog = page.getByRole("dialog", { name: "For testing only" });
+    await expect(dialog).toBeVisible();
+    const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).exclude("nextjs-portal").analyze();
+    expect(axe.violations.map((v) => v.id)).toEqual([]);
+    // Focus starts on the button, and Tab never reaches the page behind the
+    // dialog (from its last control it goes to the browser itself).
+    await expect(dialog.getByRole("button", { name: "I understand" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    expect(
+      await page.evaluate(() => {
+        const e = document.activeElement;
+        return !e || e === document.body || !!e.closest("dialog");
+      }),
+    ).toBe(true);
+    const h = await dialog.getByRole("button").evaluate((e) => e.getBoundingClientRect().height);
+    expect(h).toBeGreaterThanOrEqual(48);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await page.reload();
+    await expect(dialog).toBeHidden();
+  }
+});
 
 test("every screen", async ({ page }) => {
   for (const size of [

@@ -22,7 +22,9 @@ async function glide(page: import("@playwright/test").Page, to: number) {
 test("recording", async ({ page }) => {
   test.setTimeout(300_000);
   await page.goto("/");
-  await hold(page, 6000);
+  await hold(page, 4000);
+  await page.getByRole("button", { name: "I understand" }).click();
+  await hold(page, 2000);
 
   // 1. Give
   await page.getByRole("button", { name: /Sign in with your email|Start with a test wallet/ }).click();

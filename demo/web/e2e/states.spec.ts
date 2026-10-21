@@ -9,6 +9,11 @@ import { expect, test, type Page, type Route } from "@playwright/test";
  */
 const OUT = process.env.DESIGN_CHECK;
 test.skip(!OUT, "set DESIGN_CHECK to the screenshot folder");
+// The disclaimer is captured on its own; every other screen starts past it.
+test.beforeEach(async ({ page }, info) => {
+  if (info.title === "disclaimer") return;
+  await page.addInitScript(() => localStorage.setItem("cipherphi-demo:disclaimer", "1"));
+});
 test.setTimeout(600_000);
 
 const SIZES = [
@@ -45,6 +50,12 @@ function hold(page: Page, url: string | RegExp) {
 }
 
 const RPC = /soroban-testnet\.stellar\.org/;
+
+test("disclaimer", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("dialog", { name: "For testing only" })).toBeVisible();
+  await shoot(page, "0-disclaimer");
+});
 
 test("visitor who releases first", async ({ page }) => {
   await page.goto("/");
@@ -142,6 +153,14 @@ test("visitor who releases first", async ({ page }) => {
 
   await page.goto("/receipt");
   await shoot(page, "5-receipt-empty");
+
+  // Leaving the finished demo lands on the first page.
+  await page.goBack();
+  await page.goBack();
+  await page.goBack();
+  await page.getByRole("button", { name: "Back to the start" }).click();
+  await expect(page.getByRole("button", { name: /Start with a test wallet|Sign in/ })).toBeVisible();
+  await shoot(page, "6-back-to-start");
 });
 
 test("visitor who tries without approval first", async ({ page }) => {
