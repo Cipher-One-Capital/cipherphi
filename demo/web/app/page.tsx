@@ -90,23 +90,37 @@ export default function Demo() {
 
   const furthest = progress.approved || progress.refused ? 3 : progress.contribution ? 2 : 0;
 
+  // Signing out, or starting over, always lands on the first page.
+  const restart = async () => {
+    await session.disconnect();
+    restored.current = null;
+    setStep(0);
+    setSeen(0);
+  };
+  const again = async () => {
+    await restart();
+    await session.connect();
+  };
+  const shown = session.connected ? step : 0;
+
   return (
     <main className="shell">
       <Header>
         {session.connected && (
           <div className="who">
             <span>{session.label}</span>
-            <button className="linkish" onClick={() => session.disconnect()}>
+            <button className="linkish" onClick={restart}>
               Sign out
             </button>
           </div>
         )}
       </Header>
 
-      <Stepper step={step} furthest={Math.min(furthest, seen)} onGo={go} />
+      <Stepper step={shown} furthest={Math.min(furthest, seen)} onGo={go} />
 
-      {step === 0 && (
+      {shown === 0 && (
         <Give
+          key={session.address ?? "signed-out"}
           contribution={progress.contribution}
           onDonated={(hash) => {
             update({ contribution: hash });
@@ -115,10 +129,10 @@ export default function Demo() {
           onNext={() => go(1)}
         />
       )}
-      {step === 1 && progress.contribution && (
+      {shown === 1 && progress.contribution && (
         <Split contribution={progress.contribution} onNext={() => go(2)} />
       )}
-      {step === 2 && progress.contribution && (
+      {shown === 2 && progress.contribution && (
         <Release
           contribution={progress.contribution}
           approved={progress.approved}
@@ -127,7 +141,9 @@ export default function Demo() {
           onNext={() => go(3)}
         />
       )}
-      {step === 3 && progress.contribution && <Check progress={progress} />}
+      {shown === 3 && progress.contribution && (
+        <Check progress={progress} local={!!session.local} onAgain={again} onRestart={restart} />
+      )}
     </main>
   );
 }
@@ -191,11 +207,13 @@ function Give({
           <div className="card-head">
             <Image className="symbol symbol-sm" src="/cipherphi-symbol.svg" alt="" width={88} height={70} />
             <h1 className="display">Enforces zakat rules before funds move.</h1>
-            <p className="lede">
-              Splits each donation across the eight zakat categories. Releases a payout only with{" "}
-              {THRESHOLD} of {AUTHORITY.length} signer approvals. Links every step to a public
-              explorer.
-            </p>
+            <ul className="lede points">
+              <li>Splits each donation across the eight zakat categories.</li>
+              <li>
+                Releases a payout only with {THRESHOLD} of {AUTHORITY.length} signer approvals.
+              </li>
+              <li>Links every step to a public explorer.</li>
+            </ul>
           </div>
           <Image className="symbol symbol-lg" src="/cipherphi-symbol.svg" alt="" width={148} height={118} priority />
         </div>
@@ -666,7 +684,17 @@ function NoIcon() {
 
 // --- 4. Check ----------------------------------------------------------------
 
-function Check({ progress }: { progress: Progress }) {
+function Check({
+  progress,
+  local,
+  onAgain,
+  onRestart,
+}: {
+  progress: Progress;
+  local: boolean;
+  onAgain: () => void;
+  onRestart: () => void;
+}) {
   const params = new URLSearchParams({ c: progress.contribution! });
   if (progress.approved) params.set("r", progress.approved.hash);
   if (progress.refused) params.set("f", progress.refused.hash);
@@ -732,6 +760,24 @@ function Check({ progress }: { progress: Progress }) {
         Public page. Opens for anyone with the link, without sign-in. Contains transaction hashes
         only.
       </Note>
+      <div className="restart">
+        <h2>Demo complete</h2>
+        <p className="note">
+          {local
+            ? "Runs the four steps again with a new test wallet, or signs out and returns to the first page. Keep the receipt link first: it is the only way back to this donation."
+            : "Signs out and returns to the first page. Keep the receipt link first: it is the only way back to this donation from another device."}
+        </p>
+        <div className="actions">
+          {local && (
+            <button className="btn secondary" onClick={onAgain}>
+              Run the demo again
+            </button>
+          )}
+          <button className="btn secondary" onClick={onRestart}>
+            Back to the start
+          </button>
+        </div>
+      </div>
     </section>
   );
 }

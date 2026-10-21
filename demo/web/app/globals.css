@@ -1053,6 +1053,77 @@ code {
 
 /* Reduced motion: tokens.css stops every animation and transition, so the
    spinner holds still as a ring and the bars sit at full width from the start. */
+/* Landing points */
+.points {
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cp-2);
+}
+.points li {
+  position: relative;
+  padding-left: 22px;
+}
+.points li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cp-lime);
+  box-shadow: 0 0 0 1.5px var(--cp-ink);
+}
+
+/* End of the demo */
+.restart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cp-3);
+  padding-top: var(--cp-5);
+  border-top: var(--cp-border);
+}
+
+/* First-visit disclaimer */
+.disclaimer {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 32px;
+  border: 0;
+  border-radius: var(--cp-r-card);
+  background: var(--cp-surface);
+  color: var(--cp-ink);
+  font: var(--cp-body);
+}
+.disclaimer::backdrop {
+  background: rgba(14, 14, 18, 0.55);
+}
+.disclaimer h2 {
+  margin: 0 0 var(--cp-3);
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.disclaimer p {
+  margin: 0;
+}
+.disclaimer ul {
+  margin: var(--cp-4) 0 var(--cp-5);
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cp-2);
+}
+.disclaimer form {
+  margin: 0;
+}
+.disclaimer .btn {
+  width: 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .share-bar {
     width: var(--w);

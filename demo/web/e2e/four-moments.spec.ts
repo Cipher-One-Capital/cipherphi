@@ -7,6 +7,11 @@ const shot = async (page: import("@playwright/test").Page, name: string) => {
 
 test("give, see it split, see it released, check it", async ({ page }) => {
   await page.goto("/");
+  // The disclaimer comes first, once per browser.
+  const disclaimer = page.getByRole("dialog", { name: "For testing only" });
+  await expect(disclaimer).toContainText("Nothing here moves real money.");
+  await disclaimer.getByRole("button", { name: "I understand" }).click();
+  await expect(disclaimer).toBeHidden();
   await expect(page.getByText("Testnet demo.")).toBeVisible();
   await expect(page.getByText("Swiss Islamic Finance · Swiss Zakat Foundation · built by Bits & Blocks")).toBeVisible();
   await shot(page, "0-landing");
@@ -45,4 +50,11 @@ test("give, see it split, see it released, check it", async ({ page }) => {
   const links = page.locator('a[href^="https://stellar.expert/explorer/testnet/tx/"]');
   expect(await links.count()).toBeGreaterThanOrEqual(4);
   await shot(page, "4-receipt");
+
+  // Back in the demo, the visitor can leave it and land on the first page.
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "Demo complete" })).toBeVisible();
+  await page.getByRole("button", { name: "Back to the start" }).click();
+  await expect(page.getByRole("button", { name: /Sign in with your email|Start with a test wallet/ })).toBeVisible();
+  await expect(disclaimer).toBeHidden();
 });

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
+import { Disclaimer } from "@/components/Disclaimer";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </p>
           </footer>
         </div>
+        <Disclaimer />
       </body>
     </html>
   );
