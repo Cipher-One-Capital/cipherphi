@@ -67,6 +67,7 @@ cp .env.example .env.local          # fill from ../.secrets.json
 npm run check:vector                # the attestation encoder against the contract's vector
 npm run dev -- -p 3100
 BASE=http://localhost:3100 npm run check:flow   # the four moments via the API, live testnet
+BASE=http://localhost:3100 npm run check:burst -- 8   # eight visitors opening accounts at once
 npx playwright test e2e/four-moments.spec.ts    # the four moments in a browser
 DESIGN_CHECK=../design-check npx playwright test e2e/states.spec.ts  # every screen state, 1280 and 375 px
 npx playwright test e2e/a11y.spec.ts            # axe, keyboard focus ring, 48 px buttons

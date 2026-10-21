@@ -10,7 +10,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "check:vector": "tsx scripts/check-vector.mts",
-    "check:flow": "tsx scripts/check-flow.mts"
+    "check:flow": "tsx scripts/check-flow.mts",
+    "check:burst": "tsx scripts/check-burst.mts"
   },
   "dependencies": {
     "@privy-io/react-auth": "3.37.1",

@@ -129,36 +129,89 @@ export async function buildOnboarding(address: string): Promise<
     throw new DemoError("The demo has reached today's visitor limit. Try again tomorrow.", 429);
   }
 
-  const source = await h.loadAccount(treasury.publicKey());
+  const funds = await h.loadAccount(treasury.publicKey());
   // The treasury's USDC is bought on the testnet exchange and topped up by
   // hand (scripts/top-up.mjs), so it can run out. Say so plainly.
-  const float = source.balances.find(
+  const float = funds.balances.find(
     (b) => "asset_code" in b && b.asset_code === ASSET_CODE && b.asset_issuer === ASSET_ISSUER,
   );
   if (!float || Number(float.balance) < Number(GRANT)) {
     throw new DemoError("The demo has run out of test USDC. Try again later.", 503);
   }
-  const tx = new TransactionBuilder(source, {
+  // The transaction comes from a channel account, so visitors arriving
+  // together do not queue on one sequence number; every operation that
+  // spends is the treasury's own.
+  const channel = await channelFor(h, treasury);
+  const tx = new TransactionBuilder(channel.account, {
     fee: BASE_FEE,
     networkPassphrase: NETWORK_PASSPHRASE,
   })
-    .addOperation(Operation.beginSponsoringFutureReserves({ sponsoredId: address }))
-    .addOperation(Operation.createAccount({ destination: address, startingBalance: "0" }))
+    .addOperation(
+      Operation.beginSponsoringFutureReserves({ sponsoredId: address, source: TREASURY }),
+    )
+    .addOperation(
+      Operation.createAccount({ destination: address, startingBalance: "0", source: TREASURY }),
+    )
     .addOperation(Operation.changeTrust({ asset: token(), source: address }))
     .addOperation(Operation.endSponsoringFutureReserves({ source: address }))
     .addOperation(
-      Operation.payment({ destination: address, asset: token(), amount: GRANT.toString() }),
+      Operation.payment({
+        destination: address,
+        asset: token(),
+        amount: GRANT.toString(),
+        source: TREASURY,
+      }),
     )
     .setTimeout(300)
     .build();
-  tx.sign(treasury);
+  tx.sign(channel.key, treasury);
   return { status: "sign", xdr: tx.toXDR() };
+}
+
+/** How many channel accounts onboarding spreads over. */
+const CHANNELS = 16;
+
+/**
+ * Channel account `i`: a key derived from the treasury's, so the server
+ * needs no extra secrets. It holds a little XLM for fees and nothing else.
+ */
+function channelKey(treasury: Keypair, i: number): Keypair {
+  return Keypair.fromRawEd25519Seed(
+    hash(Buffer.concat([Buffer.from(`cipherphi-channel:${i}:`), treasury.rawSecretKey()])),
+  );
+}
+
+const isChannel = (source: string, treasury: Keypair) =>
+  Array.from({ length: CHANNELS }, (_, i) => channelKey(treasury, i).publicKey()).includes(source);
+
+/** A random channel account, opened from the treasury the first time it is used. */
+async function channelFor(h: Horizon.Server, treasury: Keypair) {
+  const key = channelKey(treasury, Math.floor(Math.random() * CHANNELS));
+  try {
+    return { key, account: await h.loadAccount(key.publicKey()) };
+  } catch {
+    const open = new TransactionBuilder(await h.loadAccount(treasury.publicKey()), {
+      fee: BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(Operation.createAccount({ destination: key.publicKey(), startingBalance: "20" }))
+      .setTimeout(60)
+      .build();
+    open.sign(treasury);
+    const result = await sendAndWait(open);
+    const exists = await h.loadAccount(key.publicKey()).then((a) => a, () => null);
+    if (exists) return { key, account: exists };
+    throw new DemoError(
+      result.ok ? "the channel account did not appear" : "The demo is opening another visitor's account. Trying again.",
+      409,
+    );
+  }
 }
 
 /** Submit the onboarding transaction once the visitor has signed it. */
 export async function submitOnboarding(signedXdr: string): Promise<string> {
   const tx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
-  if (tx instanceof FeeBumpTransaction || tx.source !== TREASURY) {
+  if (tx instanceof FeeBumpTransaction || !isChannel(tx.source, key("TREASURY_SECRET"))) {
     throw new DemoError("not an onboarding transaction");
   }
   // The treasury's signature is already on it, so a tampered body would fail
@@ -167,8 +220,33 @@ export async function submitOnboarding(signedXdr: string): Promise<string> {
   if (!tx.signatures.some((s) => treasury.verify(tx.hash(), s.signature()))) {
     throw new DemoError("onboarding transaction was altered after the treasury signed it");
   }
-  const res = await horizon().submitTransaction(tx);
-  return res.hash;
+  // Sent through RPC, which answers a sequence clash at once (Horizon on
+  // testnet times out instead). Two visitors onboarding at the same moment
+  // share the treasury's next sequence number and one loses; the browser then
+  // rebuilds, re-signs and tries again on a 409.
+  let result;
+  try {
+    result = await sendAndWait(tx, () => droppedFromChannel(tx));
+  } catch {
+    // The testnet RPC node itself failed (a 502 from its gateway, say).
+    result = { hash: tx.hash().toString("hex"), ok: false, detail: NOT_CONFIRMED };
+  }
+  if (result.ok) return result.hash;
+  // A clash can also show as a transaction the network took and then dropped.
+  // If the account exists anyway, it landed; if not, it is the same retry.
+  const address = tx.operations.find((op) => op.type === "createAccount")?.destination;
+  const exists = address && (await horizon().loadAccount(address).then(() => true, () => false));
+  if (exists) return result.hash;
+  if (["txBadSeq", "TRY_AGAIN_LATER", NOT_CONFIRMED].includes(result.detail)) {
+    throw new DemoError("The demo is opening another visitor's account. Trying again.", 409);
+  }
+  throw new DemoError(`the network refused the onboarding: ${result.detail}`, 502);
+}
+
+/** Horizon's transaction result code for a rejected submission, if it gave one. */
+function horizonCode(err: unknown): string | undefined {
+  const e = err as { response?: { data?: { extras?: { result_codes?: { transaction?: string } } } } };
+  return e?.response?.data?.extras?.result_codes?.transaction;
 }
 
 // --- 2. the donation, fee-bumped ---------------------------------------------
@@ -358,6 +436,9 @@ export async function release(contributionHash: string, approved: boolean): Prom
 
     const result = await sendAndWait(tx);
     if (!result.ok && poolErrorCode(result.detail) === 10 && approved) continue;
+    // Another visitor's payout used the distributor's sequence number first:
+    // a race on our side, not the pool's answer, so build it again.
+    if (!result.ok && result.detail === "txBadSeq") continue;
     return {
       hash: result.hash,
       ok: result.ok,
@@ -393,14 +474,22 @@ async function markerExists(marker: Buffer): Promise<boolean> {
 
 /** A no-op classic transaction that exists only to carry the memo. */
 async function sendMarker(distributor: Keypair, marker: Buffer) {
-  const account = await horizon().loadAccount(distributor.publicKey());
-  const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
-    .addOperation(Operation.bumpSequence({ bumpTo: "0" }))
-    .addMemo(Memo.hash(marker.toString("hex")))
-    .setTimeout(60)
-    .build();
-  tx.sign(distributor);
-  await horizon().submitTransaction(tx);
+  for (let attempt = 0; ; attempt++) {
+    const account = await horizon().loadAccount(distributor.publicKey());
+    const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
+      .addOperation(Operation.bumpSequence({ bumpTo: "0" }))
+      .addMemo(Memo.hash(marker.toString("hex")))
+      .setTimeout(60)
+      .build();
+    tx.sign(distributor);
+    try {
+      await horizon().submitTransaction(tx);
+      return;
+    } catch (err) {
+      // Lost a sequence race with another visitor's payout: reload and resend.
+      if (horizonCode(err) !== "tx_bad_seq" || attempt >= 3) throw err;
+    }
+  }
 }
 
 async function readSequence(server: rpc.Server): Promise<bigint> {
@@ -424,25 +513,43 @@ async function send(tx: Transaction | FeeBumpTransaction): Promise<string> {
   return result.hash;
 }
 
+const NOT_CONFIRMED = "the network did not confirm it in time";
+
+/**
+ * True once the channel account has used this transaction's sequence number
+ * for another transaction: two visitors drew the same channel, and this one
+ * was dropped. Seen in seconds, rather than after a full wait.
+ */
+async function droppedFromChannel(tx: Transaction): Promise<boolean> {
+  const account = await rpcServer().getAccount(tx.source).catch(() => null);
+  return account !== null && BigInt(account.sequenceNumber()) >= BigInt(tx.sequence);
+}
+
 async function sendAndWait(
   tx: Transaction | FeeBumpTransaction,
+  dropped?: () => Promise<boolean>,
 ): Promise<{ hash: string; ok: boolean; detail: string }> {
   const server = rpcServer();
   const sent = await server.sendTransaction(tx);
   if (sent.status === "ERROR") {
     return { hash: sent.hash, ok: false, detail: describeResult(sent.errorResult) };
   }
-  const final = await server.pollTransaction(sent.hash, {
-    attempts: 30,
-    sleepStrategy: () => 1000,
-  });
+  if (sent.status === "TRY_AGAIN_LATER") return { hash: sent.hash, ok: false, detail: "TRY_AGAIN_LATER" };
+  let final = await server.getTransaction(sent.hash);
+  for (let i = 0; i < 30 && final.status === rpc.Api.GetTransactionStatus.NOT_FOUND; i++) {
+    await new Promise((r) => setTimeout(r, 1000));
+    final = await server.getTransaction(sent.hash);
+    if (final.status === rpc.Api.GetTransactionStatus.NOT_FOUND && i >= 2 && (await dropped?.())) {
+      return { hash: sent.hash, ok: false, detail: "txBadSeq" };
+    }
+  }
   if (final.status === rpc.Api.GetTransactionStatus.SUCCESS) {
     return { hash: sent.hash, ok: true, detail: "" };
   }
   if (final.status === rpc.Api.GetTransactionStatus.FAILED) {
     return { hash: sent.hash, ok: false, detail: await failureDetail(sent.hash, final) };
   }
-  return { hash: sent.hash, ok: false, detail: "the network did not confirm it in time" };
+  return { hash: sent.hash, ok: false, detail: NOT_CONFIRMED };
 }
 
 function describeResult(result?: xdr.TransactionResult): string {
