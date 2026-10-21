@@ -13,7 +13,7 @@ const POLL_MS = 6000;
 const LOOKBACK = 17_280;
 
 /**
- * A strip under the testnet banner with the latest donation to the pool, read
+ * A strip at the top of every page with the latest donation to the pool, read
  * from the pool's Contribution events on testnet and refreshed every few
  * seconds. Shows the amount, when, and a link to the transaction; never the
  * donor's address. The treasury's seed contribution is left out, since it is

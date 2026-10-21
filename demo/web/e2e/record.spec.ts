@@ -28,10 +28,10 @@ test("recording", async ({ page }) => {
   await hold(page, 2000);
 
   // 1. Give
-  await page.getByRole("button", { name: /Sign in with your email|Start with a test wallet/ }).click();
+  await page.getByRole("button", { name: /^Start$|Sign in/ }).click();
   await expect(page.locator(".figure")).toContainText("10.00");
   await hold(page, 5000);
-  await page.getByRole("button", { name: /Give 5 USDC/ }).click();
+  await page.getByRole("button", { name: /Give 5.00 USDC/ }).click();
 
   // 2. Split
   await expect(page.locator(".split .split-row:not(.split-head):not(.split-total)")).toHaveCount(8);

@@ -12,7 +12,6 @@ import type { Signer } from "./signing/signer";
 import {
   ASSET_CODE,
   ASSET_ISSUER,
-  DONATION,
   HORIZON_URL,
   NETWORK_PASSPHRASE,
   POOL,
@@ -40,12 +39,28 @@ async function postJson<T>(base: string, path: string, body: unknown): Promise<T
     throw new Error("The demo server did not respond. Check the connection and try again.");
   }
   const json = await res.json().catch(() => ({}));
+  if (res.status === 409 && path === "/api/onboard") throw new Busy(json.error);
   if (!res.ok) throw new Error(json.error ?? `${path} failed (${res.status})`);
   return json as T;
 }
 
-/** Open, sponsor and fund the visitor's account, if it is not ready already. */
+/**
+ * Open, sponsor and fund the visitor's account, if it is not ready already.
+ * The server answers 409 when another visitor's onboarding took the treasury's
+ * sequence number first; then the whole exchange runs again.
+ */
 export async function onboard(signer: Signer, base = ""): Promise<string | null> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await onboardOnce(signer, base);
+    } catch (err) {
+      if (!(err instanceof Busy) || attempt >= 3) throw err;
+      await new Promise((r) => setTimeout(r, 1000 + Math.random() * 2000));
+    }
+  }
+}
+
+async function onboardOnce(signer: Signer, base: string): Promise<string | null> {
   const built = await postJson<{ status: "ready" } | { status: "sign"; xdr: string }>(
     base,
     "/api/onboard",
@@ -70,13 +85,16 @@ function checkOnboarding(tx: Transaction, address: string) {
   const types = tx.operations.map((op) => op.type).join(",");
   const expected =
     "beginSponsoringFutureReserves,createAccount,changeTrust,endSponsoringFutureReserves,payment";
-  if (tx.source !== TREASURY || types !== expected) {
+  if (types !== expected) {
     throw new Error("The server sent an onboarding transaction this page does not recognise, so it was not signed.");
   }
-  for (const op of tx.operations) {
-    if (op.source && op.source !== address) {
-      throw new Error("The onboarding transaction acts for another account, so it was not signed.");
-    }
+  // The visitor's signature covers only the two operations that act for the
+  // visitor: adding the trustline and accepting the sponsorship. Everything
+  // else is the treasury's own, sent from one of its channel accounts.
+  const sources = tx.operations.map((op) => op.source);
+  const want = [TREASURY, TREASURY, address, address, TREASURY];
+  if (sources.some((s, i) => s !== want[i])) {
+    throw new Error("The onboarding transaction acts for another account, so it was not signed.");
   }
 }
 
@@ -98,7 +116,7 @@ export async function tokenBalance(address: string): Promise<bigint> {
  * Donate the fixed amount. The visitor signs the call; the treasury wraps it
  * in a fee-bump and pays the fee, so the visitor's account never holds XLM.
  */
-export async function donate(signer: Signer, base = ""): Promise<string> {
+export async function donate(signer: Signer, stroops: bigint, base = ""): Promise<string> {
   const server = rpcServer();
   const account = await server.getAccount(signer.address);
   const tx = new TransactionBuilder(account, {
@@ -109,7 +127,7 @@ export async function donate(signer: Signer, base = ""): Promise<string> {
       new Contract(POOL).call(
         "contribute",
         new Address(signer.address).toScVal(),
-        nativeToScVal(DONATION * STROOPS, { type: "i128" }),
+        nativeToScVal(stroops, { type: "i128" }),
       ),
     )
     .setTimeout(120)
@@ -170,4 +188,7 @@ export function requestRelease(contribution: string, approved: boolean, base = "
   return postJson<ReleaseResult>(base, approved ? "/api/release" : "/api/release-unapproved", {
     contribution,
   });
-}
+}/** The server lost a sequence race to another visitor and asks for a retry. */
+class Busy extends Error {}
+
+

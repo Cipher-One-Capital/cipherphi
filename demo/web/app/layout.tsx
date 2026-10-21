@@ -27,10 +27,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <TipsProvider>
           <div className="page">
-            <p className="banner" role="note">
-              <strong>Testnet demo.</strong> Uses test tokens only; no real money moves. Contracts are
-              unaudited.
-            </p>
             <LiveDonations />
             <Providers>{children}</Providers>
           </div>

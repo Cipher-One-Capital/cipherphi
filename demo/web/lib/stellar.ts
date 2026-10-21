@@ -44,9 +44,19 @@ export const THRESHOLD = deployment.threshold;
 
 /** USDC has Stellar's usual seven decimals. */
 export const STROOPS = 10_000_000n;
-/** What each visitor is given, and what one donation is. */
+/** What each visitor is given, and the donation suggested first. */
 export const GRANT = 10n;
 export const DONATION = 5n;
+/** Amounts offered as one-tap choices, in whole USDC. The visitor can type any other. */
+export const SUGGESTED = ["1", "2.5", "5", "10"];
+
+/** "2.5" → stroops, or null if it is not a positive amount with at most two decimals. */
+export function parseAmount(text: string): bigint | null {
+  const m = text.trim().match(/^(\d{1,7})(?:[.,](\d{1,2}))?$/);
+  if (!m) return null;
+  const stroops = BigInt(m[1]) * STROOPS + BigInt((m[2] ?? "").padEnd(2, "0")) * 100_000n;
+  return stroops > 0n ? stroops : null;
+}
 /** What one approved payout sends to the partner organisation. */
 export const PAYOUT = 1n;
 /** The category that payout is drawn from. */

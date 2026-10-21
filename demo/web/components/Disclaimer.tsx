@@ -8,7 +8,7 @@ const SEEN = "cipherphi-demo:disclaimer";
 /**
  * Shown once per browser, on whichever page a visitor opens first. A native
  * modal dialog, so focus stays inside it and Escape closes it. Closing it any
- * way counts as read; the banner above every page repeats the short version.
+ * way counts as read.
  */
 export function Disclaimer() {
   const ref = useRef<HTMLDialogElement>(null);
@@ -42,7 +42,7 @@ export function Disclaimer() {
         <li>No personal data is written on chain.</li>
       </ul>
       <form method="dialog">
-        <button className="btn" autoFocus>
+        <button className="btn" autoFocus onClick={remember}>
           I understand
         </button>
       </form>
