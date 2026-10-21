@@ -8,6 +8,7 @@ import { Tip } from "@/components/Tips";
 import { Stepper } from "@/components/Stepper";
 import { CATEGORIES, shareFor } from "@/lib/categories";
 import {
+  type DonateStage,
   type ReleaseResult,
   donate,
   onboard,
@@ -120,9 +121,7 @@ export default function Demo() {
       <Header>
         {session.connected && (
           <div className="who">
-            <button className="linkish" onClick={restart}>
-              Sign out
-            </button>
+            <SignOut onConfirm={restart} />
           </div>
         )}
       </Header>
@@ -160,6 +159,33 @@ export default function Demo() {
   );
 }
 
+/** Signing out ends this run of the demo, so it asks first. */
+function SignOut({ onConfirm }: { onConfirm: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  return (
+    <>
+      <button className="linkish" onClick={() => ref.current?.showModal()}>
+        Sign out
+      </button>
+      <dialog ref={ref} className="disclaimer" aria-labelledby="sign-out-title">
+        <h2 id="sign-out-title">Sign out?</h2>
+        <p>All your progress in this demo will be lost, and you will start again from the first page.</p>
+        <p className="disclaimer-foot">
+          Your donation stays on the ledger. To find it again later, copy your receipt link first.
+        </p>
+        <form method="dialog" className="dialog-actions">
+          <button className="btn" onClick={onConfirm}>
+            Sign out
+          </button>
+          <button className="linkish" autoFocus>
+            Stay signed in
+          </button>
+        </form>
+      </dialog>
+    </>
+  );
+}
+
 // --- 1. Give -----------------------------------------------------------------
 
 function Give({
@@ -173,6 +199,7 @@ function Give({
 }) {
   const session = useSession();
   const [giving, setGiving] = useState(false);
+  const [stage, setStage] = useState<DonateStage | null>(null);
   const [balance, setBalance] = useState<bigint | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [amountText, setAmountText] = useState(String(DONATION));
@@ -254,11 +281,12 @@ function Give({
     setError(null);
     setGiving(true);
     try {
-      onDonated(await donate(session.signer, amount));
+      onDonated(await donate(session.signer, amount, "", setStage));
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setGiving(false);
+      setStage(null);
     }
   };
 
@@ -366,11 +394,34 @@ function Give({
             </Tip>
           )}
         </div>
-        {phase === "giving" && amount !== null && (
-          <Status>Sending {formatAmount(amount)} USDC to the zakat pool on Stellar testnet.</Status>
-        )}
+        {phase === "giving" && stage && <GiveEvents stage={stage} />}
       </div>
     </section>
+  );
+}
+
+const GIVE_EVENTS: { stage: DonateStage; text: string }[] = [
+  { stage: "check", text: "Checking the donation against the zakat pool contract" },
+  { stage: "sign", text: "Signing it with your wallet" },
+  { stage: "submit", text: "Submitting it to Stellar testnet, with the fee paid by the demo" },
+  { stage: "confirm", text: "Waiting for the next ledger to confirm it, about 5 seconds" },
+];
+
+/** What the donation is doing, one line per step as it starts. The button carries the spinner. */
+function GiveEvents({ stage }: { stage: DonateStage }) {
+  const current = GIVE_EVENTS.findIndex((e) => e.stage === stage);
+  return (
+    <ol className="events" aria-live="polite">
+      {GIVE_EVENTS.slice(0, current + 1).map((e, i) => (
+        <li key={e.stage} className={i < current ? "done" : "active"}>
+          {i < current ? <CheckIcon /> : <span className="event-dot" aria-hidden="true" />}
+          <span>
+            {e.text}
+            {i < current ? "" : "…"}
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }
 

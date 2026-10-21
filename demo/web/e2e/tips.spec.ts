@@ -100,11 +100,12 @@ test("first visit, with tips", async ({ page }) => {
   await tip(page, "Verify the system");
   await gotIt(page);
 
-  // The last tip hands over with a closing message, once.
-  const done = page.getByRole("dialog", { name: "Your turn" });
+  // The last tip ends the demo with a closing message, once.
+  const done = page.getByRole("dialog", { name: "The demo has ended" });
   await expect(done).toBeVisible();
-  if (OUT) await page.screenshot({ path: `${OUT}/7-tip-99-your-turn-1280.png` });
-  await done.getByRole("button", { name: "Start exploring" }).click();
+  await expect(done.getByRole("link", { name: /technical architecture/ })).toHaveAttribute("href", /ARCHITECTURE\.md$/);
+  if (OUT) await page.screenshot({ path: `${OUT}/7-tip-99-demo-end-1280.png` });
+  await done.getByRole("button", { name: "Keep exploring" }).click();
   await expect(done).toBeHidden();
   await page.reload();
   await expect(page.getByRole("heading", { name: "Receipt", exact: true })).toBeVisible();

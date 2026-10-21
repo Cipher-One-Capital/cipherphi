@@ -15,6 +15,7 @@ test.beforeEach(async ({ page }, info) => {
   await page.addInitScript(() => {
     localStorage.setItem("cipherphi-demo:disclaimer", "1");
     localStorage.setItem("cipherphi-demo:tips", "off");
+    localStorage.setItem("cipherphi-demo:tips-done", "1");
   });
 });
 test.setTimeout(400_000);

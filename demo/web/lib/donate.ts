@@ -112,12 +112,22 @@ export async function tokenBalance(address: string): Promise<bigint> {
   }
 }
 
+/** What a donation is doing right now, in the order it happens. */
+export type DonateStage = "check" | "sign" | "submit" | "confirm";
+
 /**
- * Donate the fixed amount. The visitor signs the call; the treasury wraps it
+ * Donate the chosen amount. The visitor signs the call; the treasury wraps it
  * in a fee-bump and pays the fee, so the visitor's account never holds XLM.
+ * `onStage` hears each step as it starts.
  */
-export async function donate(signer: Signer, stroops: bigint, base = ""): Promise<string> {
+export async function donate(
+  signer: Signer,
+  stroops: bigint,
+  base = "",
+  onStage: (stage: DonateStage) => void = () => {},
+): Promise<string> {
   const server = rpcServer();
+  onStage("check");
   const account = await server.getAccount(signer.address);
   const tx = new TransactionBuilder(account, {
     fee: BASE_FEE,
@@ -140,11 +150,25 @@ export async function donate(signer: Signer, stroops: bigint, base = ""): Promis
     throw new Error(`Stellar checked the donation and turned it down: ${sim.error}`);
   }
   const prepared = rpc.assembleTransaction(tx, sim).build();
+  onStage("sign");
   const signed = await signer.signTransaction(prepared);
+  onStage("submit");
   const { hash } = await postJson<{ hash: string }>(base, "/api/contribute", {
     signed: signed.toXDR(),
   });
-  return hash;
+
+  // The server answers once the network has accepted it; a ledger closes
+  // about every five seconds, so confirmation follows shortly after.
+  onStage("confirm");
+  for (let i = 0; i < 30; i++) {
+    const final = await server.getTransaction(hash);
+    if (final.status === rpc.Api.GetTransactionStatus.SUCCESS) return hash;
+    if (final.status === rpc.Api.GetTransactionStatus.FAILED) {
+      throw new Error("Stellar recorded the donation as failed. Nothing left your balance.");
+    }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error("The network did not confirm the donation in time. Check your balance before trying again.");
 }
 
 /** The split the pool recorded for one donation, read back from its event. */

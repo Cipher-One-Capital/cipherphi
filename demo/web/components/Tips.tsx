@@ -93,24 +93,29 @@ export function TipsProvider({ children }: { children: React.ReactNode }) {
     return TIPS.find(due)?.id ?? null;
   }, [state, mounted]);
 
-  // Every tip seen: once, a closing message hands the demo over.
-  const finished = state.ready && !state.off && TIPS.every((t) => state.seen.includes(t.id));
+  // The end of the demo: the last tip seen, or with the tips off, the receipt
+  // reached. Once, a closing message hands the demo over.
+  const finished =
+    state.ready && (state.off ? mounted.includes("verify") : TIPS.every((t) => state.seen.includes(t.id)));
   const replay = useCallback(() => {
     write("[]");
-    setState((s) => ({ ...s, seen: [] }));
+    setState((s) => ({ ...s, off: false, seen: [] }));
   }, []);
 
   const value = useMemo(() => ({ active, mount, dismiss, skip }), [active, mount, dismiss, skip]);
   return (
     <TipsContext.Provider value={value}>
       {children}
-      {finished && <TipsDone onReplay={replay} />}
+      {finished && <DemoEnd onReplay={replay} />}
     </TipsContext.Provider>
   );
 }
 
-/** The closing message after the last tip, shown once per browser. */
-function TipsDone({ onReplay }: { onReplay: () => void }) {
+const ARCHITECTURE = "https://github.com/Cipher-One-Capital/cipherphi/blob/main/ARCHITECTURE.md";
+const LANDING = "https://www.cipherphi.ch";
+
+/** The closing message at the end of the demo, shown once per browser. */
+function DemoEnd({ onReplay }: { onReplay: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     let done = false;
@@ -125,20 +130,33 @@ function TipsDone({ onReplay }: { onReplay: () => void }) {
     } catch {}
   };
   return (
-    <dialog ref={ref} className="disclaimer" aria-labelledby="tips-done-title" onClose={remember}>
-      <h2 id="tips-done-title">Your turn</h2>
-      <p>That is the whole tour. The demo is yours to explore now:</p>
+    <dialog ref={ref} className="disclaimer" aria-labelledby="demo-end-title" onClose={remember}>
+      <h2 id="demo-end-title">The demo has ended</h2>
+      <p>
+        What you just used is a sneak peek of how onchain philanthropy will look in CipherPhi: zakat
+        split by rule, paid out only with approval, and every step on a public ledger.
+      </p>
       <ul>
-        <li>Run it again with what is left in your test wallet, in any amount.</li>
-        <li>Open your receipt and check each step on Stellar Expert.</li>
-        <li>Watch the live strip as other donations land.</li>
+        <li>
+          <a href={ARCHITECTURE} target="_blank" rel="noreferrer">
+            Read the technical architecture ↗
+          </a>
+        </li>
+        <li>
+          <a href={LANDING} target="_blank" rel="noreferrer">
+            Visit the CipherPhi website ↗
+          </a>
+        </li>
       </ul>
-      <p className="disclaimer-foot">Everything runs on testnet. Nothing here moves real money.</p>
+      <p className="disclaimer-foot">
+        Everything ran on testnet and moved no real money. The demo stays open: run it again, or check
+        each step on Stellar Expert.
+      </p>
       <form method="dialog" className="dialog-actions">
         {/* Saved on the click too: the dialog's close event comes a moment
             later, after a quick reload could already have happened. */}
         <button className="btn" autoFocus onClick={remember}>
-          Start exploring
+          Keep exploring
         </button>
         <button
           className="linkish"

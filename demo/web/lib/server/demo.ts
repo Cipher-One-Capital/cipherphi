@@ -269,7 +269,12 @@ export async function sponsorContribution(signedXdr: string): Promise<string> {
     NETWORK_PASSPHRASE,
   );
   bump.sign(key("TREASURY_SECRET"));
-  return send(bump);
+  const sent = await rpcServer().sendTransaction(bump);
+  if (sent.status === "ERROR") {
+    throw new DemoError(`the network refused it: ${describeResult(sent.errorResult)}`, 502);
+  }
+  if (sent.status === "TRY_AGAIN_LATER") throw new DemoError("the network is busy, try again in a moment", 503);
+  return sent.hash;
 }
 
 function checkContribution(tx: Transaction) {
@@ -505,12 +510,6 @@ async function readSequence(server: rpc.Server): Promise<bigint> {
 }
 
 // --- submission --------------------------------------------------------------
-
-async function send(tx: Transaction | FeeBumpTransaction): Promise<string> {
-  const result = await sendAndWait(tx);
-  if (!result.ok) throw new DemoError(`the network refused it: ${result.detail}`, 502);
-  return result.hash;
-}
 
 const NOT_CONFIRMED = "the network did not confirm it in time";
 
