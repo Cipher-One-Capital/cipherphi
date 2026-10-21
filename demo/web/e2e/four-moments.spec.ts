@@ -13,7 +13,7 @@ test("give, see it split, see it released, check it", async ({ page }) => {
   await disclaimer.getByRole("button", { name: "I understand" }).click();
   await expect(disclaimer).toBeHidden();
   await expect(page.getByText("Testnet demo.")).toBeVisible();
-  await expect(page.getByText("Swiss Islamic Finance · Swiss Zakat Foundation · built by Bits & Blocks")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Demo steps" })).toHaveCount(0);
   await shot(page, "0-landing");
 
   // 1. Give

@@ -1031,26 +1031,6 @@ code {
   max-width: 30em;
 }
 
-/* --- footer --------------------------------------------------------------- */
-
-.footer {
-  border-top: var(--cp-border);
-  padding: var(--cp-7) var(--cp-6) 36px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  text-align: center;
-  font: var(--cp-meta);
-}
-.footer p {
-  margin: 0;
-}
-.footer .small {
-  font-size: 12px;
-  line-height: 18px;
-  color: var(--cp-ink-2);
-}
-
 /* Reduced motion: tokens.css stops every animation and transition, so the
    spinner holds still as a ring and the bars sit at full width from the start. */
 /* Landing points */
@@ -1188,9 +1168,6 @@ code {
   }
   .step-of strong {
     font-weight: 600;
-  }
-  .footer {
-    padding: var(--cp-6) var(--cp-4) var(--cp-8);
   }
   .card {
     padding: var(--cp-6) var(--cp-5);
