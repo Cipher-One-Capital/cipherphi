@@ -13,7 +13,7 @@ import {
   readBalances,
   readSplit,
   requestRelease,
-  tchfBalance,
+  tokenBalance,
 } from "@/lib/donate";
 import {
   DONATION,
@@ -25,7 +25,7 @@ import {
   THRESHOLD,
   AUTHORITY,
   explorer,
-  formatTchf,
+  formatAmount,
 } from "@/lib/stellar";
 import { useSession } from "@/lib/wallet/session";
 import { Busy, CheckIcon, DoneIcon, ErrorBox, Hash, Note, Spent, Spinner, Status } from "@/components/ui";
@@ -179,7 +179,7 @@ function Give({
     started.current = session.address;
     const address = session.address;
     onboard(session.signer)
-      .then(() => tchfBalance(address))
+      .then(() => tokenBalance(address))
       .then(setBalance)
       .catch((e) => setError(e.message));
   }, [session]);
@@ -259,7 +259,7 @@ function Give({
             <li className="active">
               <Spinner size={24} />
               <p>
-                Opening a test account and funding it with {formatTchf(GRANT * STROOPS)} tCHF. The demo
+                Opening a test account and funding it with {formatAmount(GRANT * STROOPS)} testnet USDC. The demo
                 pays all network fees; the donor handles no crypto.
               </p>
             </li>
@@ -276,8 +276,8 @@ function Give({
       <div className="balance">
         <span className="label">Test balance</span>
         <p className="figure">
-          <span>{formatTchf(balance ?? 0n)}</span>
-          <small>tCHF (testnet)</small>
+          <span>{formatAmount(balance ?? 0n)}</span>
+          <small>USDC (testnet)</small>
         </p>
       </div>
       {contribution && (
@@ -295,12 +295,12 @@ function Give({
             </button>
           ) : (
             <button className="btn" onClick={give} disabled={phase === "giving"}>
-              {phase === "giving" ? <Busy>Giving…</Busy> : `Give ${DONATION} tCHF as zakat`}
+              {phase === "giving" ? <Busy>Giving…</Busy> : `Give ${DONATION} USDC as zakat`}
             </button>
           )}
         </div>
         {phase === "giving" && (
-          <Status>Sending {formatTchf(DONATION * STROOPS)} tCHF to the zakat pool on Stellar testnet.</Status>
+          <Status>Sending {formatAmount(DONATION * STROOPS)} USDC to the zakat pool on Stellar testnet.</Status>
         )}
       </div>
     </section>
@@ -338,7 +338,7 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
       <div className="card-head">
         <h1>Split</h1>
         <p className="lede">
-          Splits the {formatTchf(DONATION * STROOPS)} tCHF donation across the eight categories on
+          Splits the {formatAmount(DONATION * STROOPS)} USDC donation across the eight categories on
           arrival. Donors do not choose the split. In the pilot, the Foundation&apos;s Shariah
           authority sets it; in this demo, it is fixed in the contract. The contract rejects any
           split that does not sum to the amount given.
@@ -377,10 +377,10 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
                   <i className="share-bar" />
                 </div>
                 <span role="cell" className="num gift">
-                  {formatTchf(mine[i])}
+                  {formatAmount(mine[i])}
                 </span>
                 <span role="cell" className="num pool wide">
-                  {formatTchf(pool[i])}
+                  {formatAmount(pool[i])}
                 </span>
               </div>
             );
@@ -391,10 +391,10 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
               100%
             </span>
             <span role="cell" className="num">
-              {formatTchf(total)}
+              {formatAmount(total)}
             </span>
             <span role="cell" className="num wide">
-              {formatTchf(pool.reduce((a, b) => a + b, 0n))}
+              {formatAmount(pool.reduce((a, b) => a + b, 0n))}
             </span>
           </div>
         </div>
@@ -470,7 +470,7 @@ function Release({
       <div className="card-head">
         <h1>Release</h1>
         <p className="lede">
-          Pays {formatTchf(PAYOUT * STROOPS)} tCHF from {category} to a vetted partner organisation.
+          Pays {formatAmount(PAYOUT * STROOPS)} USDC from {category} to a vetted partner organisation.
           Requires approval from {THRESHOLD} of {AUTHORITY.length} eligibility signers for that exact
           payout: recipient, category, amount, single use.
         </p>
@@ -523,7 +523,7 @@ function Release({
                 Paid
               </span>
               <p>
-                <strong>{formatTchf(BigInt(approved.amount))} tCHF</strong> paid from{" "}
+                <strong>{formatAmount(BigInt(approved.amount))} USDC</strong> paid from{" "}
                 {shareFor(approved.category)} to the partner organisation. Approved by {THRESHOLD} of{" "}
                 {AUTHORITY.length} signers.
               </p>

@@ -24,7 +24,7 @@ CipherPhi is composed of three main Soroban contracts:
 
 ## Testnet demo
 
-A clickable demo of give, split, release and check runs on Stellar testnet with a test token: pool [`CCMGJ2SBHSAGCVQBGZLOKWPX3H7EUDFMCHBNSN3VUXHQ5QZNHG3DJ4YT`](https://stellar.expert/explorer/testnet/contract/CCMGJ2SBHSAGCVQBGZLOKWPX3H7EUDFMCHBNSN3VUXHQ5QZNHG3DJ4YT), Wasm hash `f498a9c5d440ddeee3da70f37b14f95044647b586a01c816a98c24d084072677`. It is unaudited and handles no real funds.
+A clickable demo of give, split, release and check runs on Stellar testnet with Circle's testnet USDC: pool [`CD3DL4GTEFZMJUTZT4GXA5ZNPLFXNFYS4LHQQYU2ZKJ3DJJOJO6XISGU`](https://stellar.expert/explorer/testnet/contract/CD3DL4GTEFZMJUTZT4GXA5ZNPLFXNFYS4LHQQYU2ZKJ3DJJOJO6XISGU), Wasm hash `f498a9c5d440ddeee3da70f37b14f95044647b586a01c816a98c24d084072677`. It is unaudited and handles no real funds.
 
 > How it is built, and where it differs from the architecture: [demo/README.md](./demo/README.md).
 

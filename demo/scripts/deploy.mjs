@@ -4,9 +4,9 @@
 //
 //   1. Generate (or reuse) every testnet key the demo needs.
 //   2. Fund the accounts from friendbot.
-//   3. Issue the test token, tCHF, from a throwaway issuer, and give the
-//      treasury a float to hand out to visitors.
-//   4. Deploy the token's Stellar Asset Contract.
+//   3. Give the treasury a float of Circle's testnet USDC to hand out to
+//      visitors, bought on the testnet exchange (see top-up.mjs).
+//   4. Make sure USDC's Stellar Asset Contract is deployed.
 //   5. Deploy the pool from the reproducible Wasm in out/, constructor and all.
 //   6. Seed the pool with one contribution, so a payout has something to draw on
 //      even before the first visitor arrives.
@@ -23,7 +23,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  Asset,
   BASE_FEE,
   Horizon,
   Keypair,
@@ -31,6 +30,8 @@ import {
   Operation,
   TransactionBuilder,
 } from "@stellar/stellar-sdk";
+
+import { USDC, buyUsdc, usdcBalance } from "./top-up.mjs";
 
 const DEMO_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SECRETS = join(DEMO_DIR, ".secrets.json");
@@ -42,19 +43,17 @@ const HORIZON = "https://horizon-testnet.stellar.org";
 const RPC = "https://soroban-testnet.stellar.org";
 const FRIENDBOT = "https://friendbot.stellar.org";
 
-const ASSET_CODE = "tCHF";
-/// The treasury's float, in whole tCHF. Visitors are paid from this.
-const TREASURY_FLOAT = "1000000";
-/// The seed contribution, in whole tCHF.
-const SEED = "1000";
+/// The treasury's float, in whole USDC. Visitors are paid from this.
+const TREASURY_FLOAT = 5000;
+/// The seed contribution, in whole USDC.
+const SEED = "100";
 const THRESHOLD = 2;
 
 const horizon = new Horizon.Server(HORIZON);
 
 const ROLES = [
   "admin", // deploys the pool; stored on it and otherwise unused
-  "issuer", // issues tCHF
-  "treasury", // holds the tCHF float, sponsors visitor accounts, pays fees
+  "treasury", // holds the USDC float, sponsors visitor accounts, pays fees
   "distributor", // the only address allowed to submit a payout
   "authority0", // eligibility signers, 2 of 3
   "authority1",
@@ -68,7 +67,8 @@ function loadKeys() {
   for (const role of ROLES) {
     keys[role] = existing[role] ? Keypair.fromSecret(existing[role]) : Keypair.random();
   }
-  const out = Object.fromEntries(ROLES.map((r) => [r, keys[r].secret()]));
+  // Keys of earlier deployments (the tCHF issuer) are kept, not dropped.
+  const out = { ...existing, ...Object.fromEntries(ROLES.map((r) => [r, keys[r].secret()])) };
   writeFileSync(SECRETS, JSON.stringify(out, null, 2) + "\n", { mode: 0o600 });
   return keys;
 }
@@ -127,35 +127,30 @@ async function main() {
 
   const keys = loadKeys();
   console.log("funding accounts from friendbot");
-  for (const role of ["admin", "issuer", "treasury", "distributor", "partner"]) await fund(keys[role]);
-
-  const tchf = new Asset(ASSET_CODE, keys.issuer.publicKey());
+  for (const role of ["admin", "treasury", "distributor", "partner"]) await fund(keys[role]);
 
   // Trustlines, then the float. Re-runs skip what already exists.
   for (const role of ["treasury", "partner"]) {
-    if (!(await hasTrustline(keys[role].publicKey(), tchf))) {
-      console.log(`${role}: tCHF trustline`);
-      await submit(keys[role], [Operation.changeTrust({ asset: tchf })]);
+    if (!(await hasTrustline(keys[role].publicKey(), USDC))) {
+      console.log(`${role}: USDC trustline`);
+      await submit(keys[role], [Operation.changeTrust({ asset: USDC })]);
     }
   }
-  const treasury = await horizon.loadAccount(keys.treasury.publicKey());
-  const float = treasury.balances.find((b) => b.asset_code === ASSET_CODE);
-  if (!float || Number(float.balance) === 0) {
-    console.log(`issuing ${TREASURY_FLOAT} tCHF to the treasury`);
-    await submit(keys.issuer, [
-      Operation.payment({ destination: keys.treasury.publicKey(), asset: tchf, amount: TREASURY_FLOAT }),
-    ]);
+  const held = await usdcBalance(keys.treasury.publicKey());
+  if (held < TREASURY_FLOAT) {
+    console.log(`buying ${TREASURY_FLOAT - held} USDC for the treasury`);
+    await buyUsdc(keys.treasury.publicKey(), Math.ceil(TREASURY_FLOAT - held));
   }
 
-  // The SAC address is deterministic, so a re-run computes the same id. Deploy
-  // only if it is not there yet.
-  const assetContract = tchf.contractId(PASSPHRASE);
+  // Circle's USDC has had its asset contract on testnet for a long time; this
+  // only deploys it if it is somehow not there. The address is deterministic.
+  const assetContract = USDC.contractId(PASSPHRASE);
   try {
-    stellar(["contract", "asset", "deploy", "--asset", `${ASSET_CODE}:${keys.issuer.publicKey()}`,
+    stellar(["contract", "asset", "deploy", "--asset", `${USDC.getCode()}:${USDC.getIssuer()}`,
       "--source-account", keys.treasury.secret(), "--network", "testnet"]);
-    console.log(`deployed the tCHF asset contract ${assetContract}`);
+    console.log(`deployed the USDC asset contract ${assetContract}`);
   } catch {
-    console.log(`tCHF asset contract ${assetContract} already deployed`);
+    console.log(`USDC asset contract ${assetContract} already deployed`);
   }
 
   console.log("deploying the pool");
@@ -172,7 +167,7 @@ async function main() {
   ]).split("\n").pop();
   console.log(`pool ${pool}`);
 
-  console.log(`seeding the pool with ${SEED} tCHF`);
+  console.log(`seeding the pool with ${SEED} USDC`);
   stellar([
     "contract", "invoke", "--id", pool,
     "--source-account", keys.treasury.secret(), "--network", "testnet",
@@ -189,8 +184,8 @@ async function main() {
     contractId: pool,
     wasmHash,
     asset: {
-      code: ASSET_CODE,
-      issuer: keys.issuer.publicKey(),
+      code: USDC.getCode(),
+      issuer: USDC.getIssuer(),
       contractId: assetContract,
     },
     treasury: keys.treasury.publicKey(),

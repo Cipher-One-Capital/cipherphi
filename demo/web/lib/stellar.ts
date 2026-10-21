@@ -37,13 +37,13 @@ export const PARTNER = deployment.partner;
 export const AUTHORITY = deployment.authority;
 export const THRESHOLD = deployment.threshold;
 
-/** tCHF has Stellar's usual seven decimals. */
+/** USDC has Stellar's usual seven decimals. */
 export const STROOPS = 10_000_000n;
 /** What each visitor is given, and what one donation is. */
-export const GRANT = 100n;
-export const DONATION = 50n;
+export const GRANT = 10n;
+export const DONATION = 5n;
 /** What one approved payout sends to the partner organisation. */
-export const PAYOUT = 10n;
+export const PAYOUT = 1n;
 /** The category that payout is drawn from. */
 export const PAYOUT_CATEGORY = 0;
 
@@ -58,7 +58,7 @@ export const explorer = {
 };
 
 /** Two decimals, grouped thousands, no currency symbol: 1,245.00. */
-export function formatTchf(stroops: bigint): string {
+export function formatAmount(stroops: bigint): string {
   const whole = (stroops / STROOPS).toLocaleString("en-US");
   const cents = ((stroops % STROOPS) / 100_000n).toString().padStart(2, "0");
   return `${whole}.${cents}`;

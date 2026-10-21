@@ -31,7 +31,7 @@ export function Disclaimer() {
       <h2 id="disclaimer-title">For testing only</h2>
       <p>This is a demo on Stellar testnet, a public network for testing.</p>
       <ul>
-        <li>Nothing here moves real money. Every amount is a test token with no value.</li>
+        <li>Nothing here moves real money. Every amount is testnet USDC, which has no value.</li>
         <li>Never send real funds to any address shown here.</li>
         <li>
           The contracts are unaudited. One server holds every demo key, which separate parties

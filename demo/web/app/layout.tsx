@@ -32,7 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <footer className="footer">
             <p>Swiss Islamic Finance · Swiss Zakat Foundation · built by Bits &amp; Blocks</p>
             <p className="small">
-              Runs on Stellar testnet. tCHF is a test token with no value, issued for this demo.
+              Runs on Stellar testnet. Uses Circle’s testnet USDC; it has no value.
             </p>
           </footer>
         </div>

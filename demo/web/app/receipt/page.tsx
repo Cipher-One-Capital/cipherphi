@@ -15,7 +15,7 @@ import {
   contributionFromEvents,
   disbursementFromEvents,
   explorer,
-  formatTchf,
+  formatAmount,
   rpcServer,
 } from "@/lib/stellar";
 
@@ -143,7 +143,7 @@ function Receipt() {
             row={donation}
             render={(d) => (
               <p>
-                <span className="num">{formatTchf(d.amount as bigint)} tCHF</span> received by the
+                <span className="num">{formatAmount(d.amount as bigint)} USDC</span> received by the
                 zakat pool from a testnet address.
               </p>
             )}
@@ -159,7 +159,7 @@ function Receipt() {
                   {(d.split as bigint[]).map((s, i) => (
                     <li key={CATEGORIES[i].name}>
                       <span>{CATEGORIES[i].name}</span>
-                      <b>{formatTchf(s)}</b>
+                      <b>{formatAmount(s)}</b>
                     </li>
                   ))}
                 </ul>
@@ -174,7 +174,7 @@ function Receipt() {
               row={payout}
               render={(d) => (
                 <p>
-                  <span className="num">{formatTchf(d.amount as bigint)} tCHF</span> from{" "}
+                  <span className="num">{formatAmount(d.amount as bigint)} USDC</span> from{" "}
                   {shareFor(d.category as number)} to the partner organisation
                   {d.recipient === PARTNER ? "" : ` ${d.recipient}`}. Approval fingerprint:{" "}
                   <Hash value={d.attestationHash as string} />
@@ -216,7 +216,7 @@ function Receipt() {
           </dd>
           <dt>Test token</dt>
           <dd>
-            <ExplorerLink href={explorer.contract(ASSET_CONTRACT)}>tCHF (testnet)</ExplorerLink>
+            <ExplorerLink href={explorer.contract(ASSET_CONTRACT)}>USDC (testnet), Circle issuer</ExplorerLink>
           </dd>
           <dt>Partner org</dt>
           <dd>

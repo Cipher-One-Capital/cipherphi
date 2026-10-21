@@ -1,26 +1,26 @@
 # CipherPhi testnet demo
 
-A clickable demo of the CipherPhi flow for partner calls: give, see it split, see it released, check it. It runs on Stellar testnet with a test token, so a visitor can try it in a fresh browser with no setup.
+A clickable demo of the CipherPhi flow for partner calls: give, see it split, see it released, check it. It runs on Stellar testnet with Circle's testnet USDC, so a visitor can try it in a fresh browser with no setup.
 
 **Testnet only, unaudited, no real funds.** The passphrase is pinned to testnet in code and no mainnet key exists anywhere in this directory.
 
 | | |
 | --- | --- |
-| Pool contract | [`CCMGJ2SBHSAGCVQBGZLOKWPX3H7EUDFMCHBNSN3VUXHQ5QZNHG3DJ4YT`](https://stellar.expert/explorer/testnet/contract/CCMGJ2SBHSAGCVQBGZLOKWPX3H7EUDFMCHBNSN3VUXHQ5QZNHG3DJ4YT) |
+| Pool contract | [`CD3DL4GTEFZMJUTZT4GXA5ZNPLFXNFYS4LHQQYU2ZKJ3DJJOJO6XISGU`](https://stellar.expert/explorer/testnet/contract/CD3DL4GTEFZMJUTZT4GXA5ZNPLFXNFYS4LHQQYU2ZKJ3DJJOJO6XISGU) |
 | Wasm hash | `f498a9c5d440ddeee3da70f37b14f95044647b586a01c816a98c24d084072677` |
-| Test token | `tCHF` issued by `GCC6JONMUDEEHA3A7F4UIQVOAXH5CHP2QXEZZY5YR3QWUHIXTI7HRJ7X` |
-| Token contract | [`CC23RTNDA6XD55SBAI6JRDFXP4BNXQA6RZE6NBHNZOV64M7KXNUQZ5QX`](https://stellar.expert/explorer/testnet/contract/CC23RTNDA6XD55SBAI6JRDFXP4BNXQA6RZE6NBHNZOV64M7KXNUQZ5QX) |
+| Test token | Circle's testnet `USDC`, issued by `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` |
+| Token contract | [`CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`](https://stellar.expert/explorer/testnet/contract/CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA) |
 | Partner organisation | [`GDIMG5XEHP7BCHJ26AI36GFHJQVKHM3NLJZFF4ERTD5UZWB3DX5YSSNQ`](https://stellar.expert/explorer/testnet/account/GDIMG5XEHP7BCHJ26AI36GFHJQVKHM3NLJZFF4ERTD5UZWB3DX5YSSNQ) |
 | Eligibility signers | 2 of 3, public keys in [`deployment.json`](deployment.json) |
-| Deployed | 20 October 2026 |
+| Deployed | 21 October 2026 |
 
 Testnet is reset roughly quarterly and every contract on it is deleted. If the ids above stop resolving, redeploy with `npm run deploy` and update this table. The Wasm hash is the durable part: it rebuilds from this source at any time.
 
 ## The four moments
 
-1. **Give.** Sign in with an email through Privy, with no wallet app and no seed phrase. The demo opens the visitor's Stellar account with sponsored reserves, adds the tCHF trustline, and gives them 100 tCHF in one transaction. The visitor then donates 50 tCHF. The treasury pays every fee with a fee-bump, so the visitor never holds XLM.
+1. **Give.** Sign in with an email through Privy, with no wallet app and no seed phrase. The demo opens the visitor's Stellar account with sponsored reserves, adds the USDC trustline, and gives them 10 USDC in one transaction. The visitor then donates 5 USDC. The treasury pays every fee with a fee-bump, so the visitor never holds XLM.
 2. **Split.** The donation's split across the eight categories, read from the `Contribution` event the pool emitted, next to the pool's eight balances read live from contract state.
-3. **Release.** A 10 tCHF payout from "The poor" to the partner organisation, with a 2-of-3 signed approval, succeeds. The same payout with no approval is sent to the network anyway and fails with `ThresholdNotMet` (contract error 12). The UI shows that reason, and the failed transaction is public.
+3. **Release.** A 1 USDC payout from "The poor" to the partner organisation, with a 2-of-3 signed approval, succeeds. The same payout with no approval is sent to the network anyway and fails with `ThresholdNotMet` (contract error 12). The UI shows that reason, and the failed transaction is public.
 4. **Check.** A public receipt at `/receipt?c=…&r=…&f=…`, which re-reads every transaction from the ledger by hash and links each one to Stellar Expert.
 
 ## What it is built from
@@ -38,7 +38,7 @@ This is a demonstration, not the funded build. The differences are deliberate, a
 | 3 contracts: `zakat_pool`, `policy`, `attestation` | 1 contract with the split compiled in and the quorum check inline |
 | Split set by governance, validated by the Shariah authority | A fixed **placeholder** split: 30 / 20 / 10 / 5 / 5 / 15 / 10 / 5 percent, with the remainder to "The poor". It is not the Foundation's allocation. |
 | Distributor, signers and governance held by different parties | One demo server holds the distributor key and 2 of the 3 signer keys. The third signer key is not on the server. The contract enforces the role split either way. |
-| USDC through its Stellar Asset Contract | `tCHF (testnet)`, a test token from a throwaway issuer, so nothing reads as a real issuer's asset |
+| USDC through its Stellar Asset Contract | The same, with Circle's testnet USDC, which has no value |
 | Governance multisig, timelock, pause | None. The authority set is fixed at deployment. |
 
 ## Visitor caps
@@ -48,12 +48,17 @@ This is a demonstration, not the funded build. The differences are deliberate, a
 - One approved payout and one unapproved attempt per donation. Before each, the distributor sends a no-op transaction whose memo is `sha256(kind ‖ donation hash)`, and a request that finds its memo already there is refused.
 - Sponsored fees are capped at 2 XLM per transaction, and only one call is sponsored: `contribute` on this pool, from the transaction's own source, for at most the grant.
 
+## Keeping the treasury in test USDC
+
+Each visitor costs the treasury 10 USDC. Circle's faucet sends only 20 USDC per request, so the treasury buys its USDC on the testnet exchange instead, which has a large XLM/USDC pool. `node scripts/top-up.mjs 5000` opens a throwaway account from friendbot, swaps its test XLM for 5000 USDC paid straight to the treasury, and merges the rest of its XLM into the treasury too. That funds 500 visitors. When the treasury runs low, onboarding stops with "The demo has run out of test USDC" until the next top-up.
+
 ## Run it
 
 ```bash
 npm install                         # in demo/, for the build and deploy scripts
 npm run build:wasm                  # reproducible build in Docker, writes out/
-npm run deploy                      # testnet keys, tCHF, token contract, pool, seed
+npm run deploy                      # testnet keys, USDC float, pool, seed
+node scripts/top-up.mjs 5000        # more test USDC for the treasury
 node scripts/check-deployed-hash.mjs  # rebuild and compare against the chain
 
 cd web

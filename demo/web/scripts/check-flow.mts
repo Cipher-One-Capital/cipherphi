@@ -7,8 +7,8 @@
 
 import { Keypair } from "@stellar/stellar-sdk";
 import { privySigner } from "../lib/signing/privy";
-import { donate, onboard, readBalances, readSplit, requestRelease, tchfBalance } from "../lib/donate";
-import { POOL_ERRORS, explorer, formatTchf } from "../lib/stellar";
+import { donate, onboard, readBalances, readSplit, requestRelease, tokenBalance } from "../lib/donate";
+import { GRANT, POOL_ERRORS, STROOPS, explorer, formatAmount } from "../lib/stellar";
 
 const base = process.env.BASE ?? "http://localhost:3000";
 const visitor = Keypair.random();
@@ -28,9 +28,9 @@ step("give: onboard");
 const onboarding = await onboard(signer, base);
 if (!onboarding) fail("a fresh address came back as already onboarded");
 console.log("onboarded", explorer.tx(onboarding));
-const granted = await tchfBalance(visitor.publicKey());
-console.log("balance", formatTchf(granted), "tCHF");
-if (granted !== 100n * 10_000_000n) fail("grant was not 100 tCHF");
+const granted = await tokenBalance(visitor.publicKey());
+console.log("balance", formatAmount(granted), "USDC");
+if (granted !== GRANT * STROOPS) fail(`grant was not ${GRANT} USDC`);
 
 const again = await onboard(signer, base);
 if (again !== null) fail("the same address was funded twice");
@@ -44,7 +44,7 @@ console.log("donated", explorer.tx(donation));
 step("see it split");
 const split = await readSplit(donation);
 if (!split) fail("no Contribution event on the donation");
-console.log("split", split.split.map((s) => formatTchf(s)).join(" / "));
+console.log("split", split.split.map((s) => formatAmount(s)).join(" / "));
 const sum = split.split.reduce((a, b) => a + b, 0n);
 if (sum !== split.amount) fail("split does not sum to the donation");
 const after = await readBalances();

@@ -45,7 +45,7 @@ import {
  *
  * Four keys live here, all testnet, all throwaway:
  *
- *   - the treasury, which sponsors a visitor's account, gives them tCHF, and
+ *   - the treasury, which sponsors a visitor's account, gives them USDC, and
  *     pays their transaction fees;
  *   - the distributor, the only address the pool lets submit a payout;
  *   - two of the three eligibility signers. The third is deliberately not on
@@ -72,7 +72,7 @@ function key(name: string): Keypair {
   return Keypair.fromSecret(secret);
 }
 
-const tchf = () => new Asset(ASSET_CODE, ASSET_ISSUER);
+const token = () => new Asset(ASSET_CODE, ASSET_ISSUER);
 const horizon = () => new Horizon.Server(HORIZON_URL);
 
 /** How many visitor accounts the treasury will open in any 24 hours. */
@@ -83,7 +83,7 @@ const MAX_SPONSORED_FEE = 20_000_000n; // 2 XLM
 // --- 1. onboarding -----------------------------------------------------------
 
 /**
- * A transaction that opens the visitor's account, adds the tCHF trustline, and
+ * A transaction that opens the visitor's account, adds the USDC trustline, and
  * pays them the grant, with the treasury sponsoring every reserve. The
  * treasury signs it here; the visitor's signature, added in the browser, is
  * what makes it valid. Because the treasury has already signed, the visitor
@@ -107,7 +107,7 @@ export async function buildOnboarding(address: string): Promise<
     );
     if (holds) return { status: "ready" };
     throw new DemoError(
-      "This address already exists on testnet without tCHF, so the demo will not fund it. Sign in with a different email.",
+      "This address already exists on testnet without testnet USDC, so the demo will not fund it. Sign in with a different email.",
     );
   } catch (err) {
     if (err instanceof DemoError) throw err;
@@ -130,16 +130,24 @@ export async function buildOnboarding(address: string): Promise<
   }
 
   const source = await h.loadAccount(treasury.publicKey());
+  // The treasury's USDC is bought on the testnet exchange and topped up by
+  // hand (scripts/top-up.mjs), so it can run out. Say so plainly.
+  const float = source.balances.find(
+    (b) => "asset_code" in b && b.asset_code === ASSET_CODE && b.asset_issuer === ASSET_ISSUER,
+  );
+  if (!float || Number(float.balance) < Number(GRANT)) {
+    throw new DemoError("The demo has run out of test USDC. Try again later.", 503);
+  }
   const tx = new TransactionBuilder(source, {
     fee: BASE_FEE,
     networkPassphrase: NETWORK_PASSPHRASE,
   })
     .addOperation(Operation.beginSponsoringFutureReserves({ sponsoredId: address }))
     .addOperation(Operation.createAccount({ destination: address, startingBalance: "0" }))
-    .addOperation(Operation.changeTrust({ asset: tchf(), source: address }))
+    .addOperation(Operation.changeTrust({ asset: token(), source: address }))
     .addOperation(Operation.endSponsoringFutureReserves({ source: address }))
     .addOperation(
-      Operation.payment({ destination: address, asset: tchf(), amount: GRANT.toString() }),
+      Operation.payment({ destination: address, asset: token(), amount: GRANT.toString() }),
     )
     .setTimeout(300)
     .build();

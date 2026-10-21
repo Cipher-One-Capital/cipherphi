@@ -80,7 +80,7 @@ function checkOnboarding(tx: Transaction, address: string) {
   }
 }
 
-export async function tchfBalance(address: string): Promise<bigint> {
+export async function tokenBalance(address: string): Promise<bigint> {
   try {
     const account = await new Horizon.Server(HORIZON_URL).loadAccount(address);
     const line = account.balances.find(
