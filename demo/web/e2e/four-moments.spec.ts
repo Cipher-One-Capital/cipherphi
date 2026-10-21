@@ -6,6 +6,8 @@ const shot = async (page: import("@playwright/test").Page, name: string) => {
 };
 
 test("give, see it split, see it released, check it", async ({ page }) => {
+  // The first-run tips have their own test; this one walks the flow without them.
+  await page.addInitScript(() => localStorage.setItem("cipherphi-demo:tips", "off"));
   await page.goto("/");
   // The disclaimer comes first, once per browser.
   const disclaimer = page.getByRole("dialog", { name: "For testing only" });
@@ -51,8 +53,8 @@ test("give, see it split, see it released, check it", async ({ page }) => {
   expect(await links.count()).toBeGreaterThanOrEqual(4);
   await shot(page, "4-receipt");
 
-  // Back in the demo, the visitor can leave it and land on the first page.
-  await page.goBack();
+  // The receipt leads back to the demo, where the visitor can leave it and land on the first page.
+  await page.getByRole("link", { name: /Back to the demo/ }).first().click();
   await expect(page.getByRole("heading", { name: "Demo complete" })).toBeVisible();
   await page.getByRole("button", { name: "Back to the start" }).click();
   await expect(page.getByRole("button", { name: /Sign in with your email|Start with a test wallet/ })).toBeVisible();

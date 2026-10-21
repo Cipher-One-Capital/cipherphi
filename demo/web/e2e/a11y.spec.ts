@@ -12,7 +12,10 @@ import { expect, test, type Page } from "@playwright/test";
 // The disclaimer is captured on its own; every other screen starts past it.
 test.beforeEach(async ({ page }, info) => {
   if (info.title === "disclaimer") return;
-  await page.addInitScript(() => localStorage.setItem("cipherphi-demo:disclaimer", "1"));
+  await page.addInitScript(() => {
+    localStorage.setItem("cipherphi-demo:disclaimer", "1");
+    localStorage.setItem("cipherphi-demo:tips", "off");
+  });
 });
 test.setTimeout(400_000);
 

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExplorerLink, Header } from "@/components/Header";
+import { Tip } from "@/components/Tips";
 import { Stepper } from "@/components/Stepper";
 import { CATEGORIES, shareFor } from "@/lib/categories";
 import {
@@ -220,9 +221,11 @@ function Give({
         </div>
         <div className="stack">
           <div className="actions">
-            <button className="btn" onClick={() => session.connect()}>
-              {session.local ? "Start with a test wallet" : "Sign in with your email"}
-            </button>
+            <Tip id="start">
+              <button className="btn" onClick={() => session.connect()}>
+                {session.local ? "Start with a test wallet" : "Sign in with your email"}
+              </button>
+            </Tip>
           </div>
           <p className="note">
             {session.local
@@ -251,21 +254,23 @@ function Give({
     return (
       <section className="card">
         <h1 className="sr-only">Give</h1>
-        <ol className="setup" role="status">
-          <li className={phase === "wallet" ? "active" : "done"}>
-            {phase === "wallet" ? <Spinner size={24} /> : <DoneIcon />}
-            <p>Creates a wallet for this session. Requires nothing to write down.</p>
-          </li>
-          {phase === "account" && (
-            <li className="active">
-              <Spinner size={24} />
-              <p>
-                Opening a test account and funding it with {formatAmount(GRANT * STROOPS)} testnet USDC. The demo
-                pays all network fees; the donor handles no crypto.
-              </p>
+        <Tip id="setup" block>
+          <ol className="setup" aria-live="polite">
+            <li className={phase === "wallet" ? "active" : "done"}>
+              {phase === "wallet" ? <Spinner size={24} /> : <DoneIcon />}
+              <p>Creates a wallet for this session. Requires nothing to write down.</p>
             </li>
-          )}
-        </ol>
+            {phase === "account" && (
+              <li className="active">
+                <Spinner size={24} />
+                <p>
+                  Opening a test account and funding it with {formatAmount(GRANT * STROOPS)} testnet USDC. The demo
+                  pays all network fees; the donor handles no crypto.
+                </p>
+              </li>
+            )}
+          </ol>
+        </Tip>
         {error && <ErrorBox title="Account not opened.">{error}</ErrorBox>}
       </section>
     );
@@ -274,13 +279,15 @@ function Give({
   return (
     <section className="card">
       <h1 className="sr-only">Give</h1>
-      <div className="balance">
-        <span className="label">Test balance</span>
-        <p className="figure">
-          <span>{formatAmount(balance ?? 0n)}</span>
-          <small>USDC (testnet)</small>
-        </p>
-      </div>
+      <Tip id="balance" block>
+        <div className="balance">
+          <span className="label">Test balance</span>
+          <p className="figure">
+            <span>{formatAmount(balance ?? 0n)}</span>
+            <small>USDC (testnet)</small>
+          </p>
+        </div>
+      </Tip>
       {contribution && (
         <p className="panel">
           A donation from this account is already recorded.{" "}
@@ -295,9 +302,11 @@ function Give({
               See how it was split
             </button>
           ) : (
-            <button className="btn" onClick={give} disabled={phase === "giving"}>
-              {phase === "giving" ? <Busy>Giving…</Busy> : `Give ${DONATION} USDC as zakat`}
-            </button>
+            <Tip id="give">
+              <button className="btn" onClick={give} disabled={phase === "giving"}>
+                {phase === "giving" ? <Busy>Giving…</Busy> : `Give ${DONATION} USDC as zakat`}
+              </button>
+            </Tip>
           )}
         </div>
         {phase === "giving" && (
@@ -347,58 +356,60 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
       </div>
 
       {mine && pool ? (
-        <div className="split" role="table" aria-label="Your zakat by category" ref={grow}>
-          <div className="split-row split-head" role="row">
-            <span role="columnheader">Category</span>
-            <span role="columnheader" className="wide">
-              Share
-            </span>
-            <span role="columnheader" className="num">
-              Your zakat
-            </span>
-            <span role="columnheader" className="num wide">
-              Pool now holds
-            </span>
-          </div>
-          {CATEGORIES.map((c, i) => {
-            const bar = {
-              "--w": `${((c.share / top) * 100).toFixed(1)}%`,
-              "--i": i,
-            } as React.CSSProperties;
-            return (
-              <div className="split-row" role="row" key={c.name} style={bar}>
-                <div role="rowheader" className="cat">
-                  <span className="cat-name">{c.name}</span>
-                  <span className="cat-sub">
-                    {c.arabic} · {c.share / 100}%
+        <Tip id="split" block>
+          <div className="split" role="table" aria-label="Your zakat by category" ref={grow}>
+            <div className="split-row split-head" role="row">
+              <span role="columnheader">Category</span>
+              <span role="columnheader" className="wide">
+                Share
+              </span>
+              <span role="columnheader" className="num">
+                Your zakat
+              </span>
+              <span role="columnheader" className="num wide">
+                Pool now holds
+              </span>
+            </div>
+            {CATEGORIES.map((c, i) => {
+              const bar = {
+                "--w": `${((c.share / top) * 100).toFixed(1)}%`,
+                "--i": i,
+              } as React.CSSProperties;
+              return (
+                <div className="split-row" role="row" key={c.name} style={bar}>
+                  <div role="rowheader" className="cat">
+                    <span className="cat-name">{c.name}</span>
+                    <span className="cat-sub">
+                      {c.arabic} · {c.share / 100}%
+                    </span>
+                    <i className="share-bar narrow" aria-hidden="true" />
+                  </div>
+                  <div role="cell" className="wide" aria-label={`${c.share / 100}%`}>
+                    <i className="share-bar" />
+                  </div>
+                  <span role="cell" className="num gift">
+                    {formatAmount(mine[i])}
                   </span>
-                  <i className="share-bar narrow" aria-hidden="true" />
+                  <span role="cell" className="num pool wide">
+                    {formatAmount(pool[i])}
+                  </span>
                 </div>
-                <div role="cell" className="wide" aria-label={`${c.share / 100}%`}>
-                  <i className="share-bar" />
-                </div>
-                <span role="cell" className="num gift">
-                  {formatAmount(mine[i])}
-                </span>
-                <span role="cell" className="num pool wide">
-                  {formatAmount(pool[i])}
-                </span>
-              </div>
-            );
-          })}
-          <div className="split-row split-total" role="row">
-            <span role="rowheader">Total</span>
-            <span role="cell" className="cat-sub wide">
-              100%
-            </span>
-            <span role="cell" className="num">
-              {formatAmount(total)}
-            </span>
-            <span role="cell" className="num wide">
-              {formatAmount(pool.reduce((a, b) => a + b, 0n))}
-            </span>
+              );
+            })}
+            <div className="split-row split-total" role="row">
+              <span role="rowheader">Total</span>
+              <span role="cell" className="cat-sub wide">
+                100%
+              </span>
+              <span role="cell" className="num">
+                {formatAmount(total)}
+              </span>
+              <span role="cell" className="num wide">
+                {formatAmount(pool.reduce((a, b) => a + b, 0n))}
+              </span>
+            </div>
           </div>
-        </div>
+        </Tip>
       ) : error ? (
         <ErrorBox title="Donation not readable.">{error}</ErrorBox>
       ) : (
@@ -420,12 +431,14 @@ function Split({ contribution, onNext }: { contribution: string; onNext: () => v
         </div>
       )}
 
-      <Note>
-        Your zakat: read from the Contribution event recorded for this transaction. Pool now holds:
-        read live from contract state. Percentages: demo placeholders, not the Foundation&apos;s
-        allocation, not set by its Shariah authority.{" "}
-        <ExplorerLink href={explorer.tx(contribution)}>Your donation on Stellar Expert</ExplorerLink>
-      </Note>
+      <Tip id="split-note" block>
+        <Note>
+          Your zakat: read from the Contribution event recorded for this transaction. Pool now holds:
+          read live from contract state. Percentages: demo placeholders, not the Foundation&apos;s
+          allocation, not set by its Shariah authority.{" "}
+          <ExplorerLink href={explorer.tx(contribution)}>Your donation on Stellar Expert</ExplorerLink>
+        </Note>
+      </Tip>
       <div className="actions">
         <button className="btn" onClick={onNext} disabled={!mine}>
           Next: Release
@@ -477,7 +490,9 @@ function Release({
         </p>
       </div>
 
-      <RoleDiagram />
+      <Tip id="roles" block>
+        <RoleDiagram />
+      </Tip>
 
       <div className="stack">
         <div className="actions">
@@ -486,18 +501,22 @@ function Release({
               <Spent>Released</Spent>
             </button>
           ) : (
-            <button className="btn" onClick={() => run(true)} disabled={busy !== null}>
-              {busy === "approved" ? <Busy>Releasing…</Busy> : "Release with approval"}
-            </button>
+            <Tip id="release">
+              <button className="btn" onClick={() => run(true)} disabled={busy !== null}>
+                {busy === "approved" ? <Busy>Releasing…</Busy> : "Release with approval"}
+              </button>
+            </Tip>
           )}
           {refused ? (
             <button className="btn spent" disabled>
               <Spent>Tried without approval</Spent>
             </button>
           ) : (
-            <button className="btn secondary" onClick={() => run(false)} disabled={busy !== null}>
-              {busy === "refused" ? <Busy>Trying…</Busy> : "Try it without approval"}
-            </button>
+            <Tip id="refuse">
+              <button className="btn secondary" onClick={() => run(false)} disabled={busy !== null}>
+                {busy === "refused" ? <Busy>Trying…</Busy> : "Try it without approval"}
+              </button>
+            </Tip>
           )}
         </div>
         {busy && <Status>Submitting to Stellar testnet. Takes up to 30 seconds.</Status>}
@@ -508,57 +527,61 @@ function Release({
       {(approved || refused) && (
         <div className={`outcomes${approved && refused ? " both" : ""}`} role="status">
           {approved && (
-            <article className="outcome paid">
-              <span className="tag">
-                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                  <circle cx="8" cy="8" r="7" fill="var(--cp-ink)" />
-                  <path
-                    d="M4.8 8.2l2.1 2.1 4.3-4.5"
-                    fill="none"
-                    stroke="var(--cp-lime)"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                Paid
-              </span>
-              <p>
-                <strong>{formatAmount(BigInt(approved.amount))} USDC</strong> paid from{" "}
-                {shareFor(approved.category)} to the partner organisation. Approved by {THRESHOLD} of{" "}
-                {AUTHORITY.length} signers.
-              </p>
-              {approved.attestationHash && (
-                <p className="small">
-                  Approval fingerprint: <Hash value={approved.attestationHash} />. Hash of the
-                  off-chain approval; ties this payout to it.
+            <Tip id="paid" block>
+              <article className="outcome paid">
+                <span className="tag">
+                  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                    <circle cx="8" cy="8" r="7" fill="var(--cp-ink)" />
+                    <path
+                      d="M4.8 8.2l2.1 2.1 4.3-4.5"
+                      fill="none"
+                      stroke="var(--cp-lime)"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Paid
+                </span>
+                <p>
+                  <strong>{formatAmount(BigInt(approved.amount))} USDC</strong> paid from{" "}
+                  {shareFor(approved.category)} to the partner organisation. Approved by {THRESHOLD} of{" "}
+                  {AUTHORITY.length} signers.
                 </p>
-              )}
-              <ExplorerLink href={explorer.tx(approved.hash)}>The payout on Stellar Expert</ExplorerLink>
-            </article>
+                {approved.attestationHash && (
+                  <p className="small">
+                    Approval fingerprint: <Hash value={approved.attestationHash} />. Hash of the
+                    off-chain approval; ties this payout to it.
+                  </p>
+                )}
+                <ExplorerLink href={explorer.tx(approved.hash)}>The payout on Stellar Expert</ExplorerLink>
+              </article>
+            </Tip>
           )}
           {refused && (
-            <article className="outcome refused">
-              <span className="tag">
-                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                  <circle cx="8" cy="8" r="6.3" fill="none" stroke="var(--cp-ink)" strokeWidth="1.6" />
-                  <path d="M5.2 8h5.6" stroke="var(--cp-ink)" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-                Refused by the pool
-              </span>
-              <p>
-                <strong>Same payout, no approval attached.</strong>{" "}
-                {POOL_ERRORS[refused.error?.code ?? 12]?.plain ?? refused.error?.detail}
-              </p>
-              <p className="small">
-                Contract error: <code>{POOL_ERRORS[refused.error?.code ?? 12]?.name}</code>. No funds
-                moved. Submitted to the network on purpose, so the refusal is a public failed
-                transaction, not a claim.
-              </p>
-              <ExplorerLink href={explorer.tx(refused.hash)}>
-                The refused attempt on Stellar Expert
-              </ExplorerLink>
-            </article>
+            <Tip id="refused" block>
+              <article className="outcome refused">
+                <span className="tag">
+                  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                    <circle cx="8" cy="8" r="6.3" fill="none" stroke="var(--cp-ink)" strokeWidth="1.6" />
+                    <path d="M5.2 8h5.6" stroke="var(--cp-ink)" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  Refused by the pool
+                </span>
+                <p>
+                  <strong>Same payout, no approval attached.</strong>{" "}
+                  {POOL_ERRORS[refused.error?.code ?? 12]?.plain ?? refused.error?.detail}
+                </p>
+                <p className="small">
+                  Contract error: <code>{POOL_ERRORS[refused.error?.code ?? 12]?.name}</code>. No funds
+                  moved. Submitted to the network on purpose, so the refusal is a public failed
+                  transaction, not a claim.
+                </p>
+                <ExplorerLink href={explorer.tx(refused.hash)}>
+                  The refused attempt on Stellar Expert
+                </ExplorerLink>
+              </article>
+            </Tip>
           )}
         </div>
       )}
@@ -713,9 +736,11 @@ function Check({
         </p>
       </div>
       <div className="actions">
-        <Link className="btn" href={href}>
-          Open your receipt
-        </Link>
+        <Tip id="receipt">
+          <Link className="btn" href={href}>
+            Open your receipt
+          </Link>
+        </Tip>
         <button
           className="btn secondary"
           aria-live="polite"

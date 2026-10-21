@@ -1,11 +1,13 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { rpc } from "@stellar/stellar-sdk";
 import { ExplorerLink, Header } from "@/components/Header";
 import { CATEGORIES, shareFor } from "@/lib/categories";
 import { Hash, InfoIcon, Spinner } from "@/components/ui";
+import { Tip } from "@/components/Tips";
 import {
   ASSET_CONTRACT,
   PARTNER,
@@ -28,9 +30,17 @@ export default function ReceiptPage() {
   return (
     <main className="shell">
       <Header />
+      <Link className="back" href="/">
+        <span aria-hidden="true">←</span> Back to the demo
+      </Link>
       <Suspense fallback={<section className="card" />}>
         <Receipt />
       </Suspense>
+      <div className="actions">
+        <Link className="btn secondary" href="/">
+          Back to the demo
+        </Link>
+      </div>
     </main>
   );
 }
@@ -200,31 +210,33 @@ function Receipt() {
       </section>
 
       <section className="card">
-        <h2>Verify the system</h2>
-        <dl className="facts">
-          <dt>Zakat pool</dt>
-          <dd>
-            <ExplorerLink href={explorer.contract(POOL)}>
-              <Hash value={POOL} tail={8} />
-            </ExplorerLink>
-          </dd>
-          <dt>Contract code</dt>
-          <dd>
-            <code className="hash" title={WASM_HASH}>
-              sha256 {WASM_HASH.slice(0, 16)}…{WASM_HASH.slice(-9)}
-            </code>
-          </dd>
-          <dt>Test token</dt>
-          <dd>
-            <ExplorerLink href={explorer.contract(ASSET_CONTRACT)}>USDC (testnet), Circle issuer</ExplorerLink>
-          </dd>
-          <dt>Partner org</dt>
-          <dd>
-            <ExplorerLink href={explorer.account(PARTNER)}>
-              <Hash value={PARTNER} tail={5} />
-            </ExplorerLink>
-          </dd>
-        </dl>
+        <Tip id="verify" block>
+          <h2>Verify the system</h2>
+          <dl className="facts">
+            <dt>Zakat pool</dt>
+            <dd>
+              <ExplorerLink href={explorer.contract(POOL)}>
+                <Hash value={POOL} tail={8} />
+              </ExplorerLink>
+            </dd>
+            <dt>Contract code</dt>
+            <dd>
+              <code className="hash" title={WASM_HASH}>
+                sha256 {WASM_HASH.slice(0, 16)}…{WASM_HASH.slice(-9)}
+              </code>
+            </dd>
+            <dt>Test token</dt>
+            <dd>
+              <ExplorerLink href={explorer.contract(ASSET_CONTRACT)}>USDC (testnet), Circle issuer</ExplorerLink>
+            </dd>
+            <dt>Partner org</dt>
+            <dd>
+              <ExplorerLink href={explorer.account(PARTNER)}>
+                <Hash value={PARTNER} tail={5} />
+              </ExplorerLink>
+            </dd>
+          </dl>
+        </Tip>
         <p className="facts-note">
           Contract code hash: reproducible from the published source; confirms the pool runs the code
           it claims. On-chain data: addresses, amounts and hashes only; no personal data. Testnet

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { scValToNative } from "@stellar/stellar-sdk";
+import { Tip } from "@/components/Tips";
 import { BOT, POOL, TREASURY, explorer, formatAmount, rpcServer } from "@/lib/stellar";
 
 type Donation = { id: string; hash: string; amount: bigint; at: number; bot: boolean };
@@ -92,27 +93,29 @@ export function LiveDonations() {
   const latest = donations[donations.length - 1];
 
   return (
-    <div className="live" role="status" aria-label="Live donations">
-      <span className="live-dot" aria-hidden="true" />
-      <span className="live-label">Live</span>
-      {latest ? (
-        <>
-          <span key={latest.id} className={latest.id === fresh ? "live-item fresh" : "live-item"}>
-            <strong>{formatAmount(latest.amount)} USDC</strong>{" "}
-            {latest.bot ? "given by the demo bot" : "given to the zakat pool"} {ago(now - latest.at)}.{" "}
-            <a href={explorer.tx(latest.hash)} target="_blank" rel="noreferrer">
-              View<span className="sr-only"> this donation on Stellar Expert</span>
-            </a>
-          </span>
-          <span className="live-count">
-            {visitors} {visitors === 1 ? "visitor donation" : "visitor donations"} in the last 24 hours
-            {fromBot > 0 && `, plus ${fromBot} from the demo bot`}
-          </span>
-        </>
-      ) : (
-        <span className="live-item">No donations in the last 24 hours yet.</span>
-      )}
-    </div>
+    <Tip id="live" block center>
+      <div className="live" role="status" aria-label="Live donations">
+        <span className="live-dot" aria-hidden="true" />
+        <span className="live-label">Live</span>
+        {latest ? (
+          <>
+            <span key={latest.id} className={latest.id === fresh ? "live-item fresh" : "live-item"}>
+              <strong>{formatAmount(latest.amount)} USDC</strong>{" "}
+              {latest.bot ? "given by the demo bot" : "given to the zakat pool"} {ago(now - latest.at)}.{" "}
+              <a href={explorer.tx(latest.hash)} target="_blank" rel="noreferrer">
+                View<span className="sr-only"> this donation on Stellar Expert</span>
+              </a>
+            </span>
+            <span className="live-count">
+              {visitors} {visitors === 1 ? "visitor donation" : "visitor donations"} in the last 24 hours
+              {fromBot > 0 && `, plus ${fromBot} from the demo bot`}
+            </span>
+          </>
+        ) : (
+          <span className="live-item">No donations in the last 24 hours yet.</span>
+        )}
+      </div>
+    </Tip>
   );
 }
 
