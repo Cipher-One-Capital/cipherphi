@@ -1,3 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { formatAmount } from "@/lib/stellar";
+
 /**
  * The shared pieces of the component sheet: spinner, status line, error box,
  * note panel and the small icons the buttons and outcome cards carry.
@@ -18,14 +23,73 @@ export function Spinner({ size = 16, muted }: { size?: number; muted?: boolean }
   );
 }
 
-/** A spinner and one line, announced to screen readers as it changes. */
-export function Status({ children }: { children: React.ReactNode }) {
+const STRIP = [" ", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
+/**
+ * An amount that rolls to its value digit by digit, like a banking app: it
+ * shows `from` first, then each digit turns over to the new one. Digits are
+ * aligned from the right, so a figure that grows gains a column on the left.
+ */
+export function Rolling({ value, from = 0n, delay = 0 }: { value: bigint; from?: bigint; delay?: number }) {
+  const [shown, setShown] = useState(from);
+  useEffect(() => {
+    const t = setTimeout(() => setShown(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  const target = formatAmount(value);
+  const now = formatAmount(shown);
+  const width = Math.max(target.length, now.length);
+  const chars = [...now.padStart(width, " ")];
+  const digit = (c: string) => c === " " || (c >= "0" && c <= "9");
   return (
-    <p className="status" role="status">
-      <Spinner />
-      <span>{children}</span>
-    </p>
+    <span className="roll">
+      <span className="sr-only">{target}</span>
+      <span aria-hidden="true">
+        {chars.map((c, i) =>
+          digit(c) ? (
+            <span key={width - i} className={`roll-col${c === " " ? " blank" : ""}`}>
+              <span className="roll-strip" style={{ "--d": STRIP.indexOf(c) } as React.CSSProperties}>
+                {STRIP.map((d) => (
+                  <span key={d}>{d}</span>
+                ))}
+              </span>
+            </span>
+          ) : (
+            <span key={width - i}>{c}</span>
+          ),
+        )}
+      </span>
+    </span>
   );
+}
+
+export type Event = { key: string; text: string; done: boolean };
+
+/**
+ * What the page is waiting on, one line per real step as it starts, ticked
+ * once done. No spinner: the button that started it carries one, and the
+ * current step's dot pulses.
+ */
+export function Events({ items }: { items: Event[] }) {
+  return (
+    <ol className="events" role="status">
+      {items.map((e) => (
+        <li key={e.key} className={e.done ? "done" : "active"}>
+          {e.done ? <CheckIcon /> : <span className="event-dot" aria-hidden="true" />}
+          <span>
+            {e.text}
+            {e.done ? "" : "…"}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** The steps of a sequence up to the current one, those before it done. */
+export function upTo<K extends string>(steps: readonly { key: K; text: string }[], current: K): Event[] {
+  const at = steps.findIndex((s) => s.key === current);
+  return steps.slice(0, at + 1).map((s, i) => ({ ...s, done: i < at }));
 }
 
 /** Label for a busy button: the spinner sits before it and the button keeps its width. */

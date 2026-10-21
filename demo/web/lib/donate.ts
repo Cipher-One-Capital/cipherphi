@@ -17,6 +17,7 @@ import {
   POOL,
   STROOPS,
   TREASURY,
+  type ReleaseStage,
   contributionFromEvents,
   rpcServer,
 } from "./stellar";
@@ -49,10 +50,17 @@ async function postJson<T>(base: string, path: string, body: unknown): Promise<T
  * The server answers 409 when another visitor's onboarding took the treasury's
  * sequence number first; then the whole exchange runs again.
  */
-export async function onboard(signer: Signer, base = ""): Promise<string | null> {
+/** The steps of opening a visitor's account, in order. */
+export type OnboardStage = "build" | "sign" | "submit";
+
+export async function onboard(
+  signer: Signer,
+  base = "",
+  onStage: (stage: OnboardStage) => void = () => {},
+): Promise<string | null> {
   for (let attempt = 0; ; attempt++) {
     try {
-      return await onboardOnce(signer, base);
+      return await onboardOnce(signer, base, onStage);
     } catch (err) {
       if (!(err instanceof Busy) || attempt >= 3) throw err;
       await new Promise((r) => setTimeout(r, 1000 + Math.random() * 2000));
@@ -60,7 +68,12 @@ export async function onboard(signer: Signer, base = ""): Promise<string | null>
   }
 }
 
-async function onboardOnce(signer: Signer, base: string): Promise<string | null> {
+async function onboardOnce(
+  signer: Signer,
+  base: string,
+  onStage: (stage: OnboardStage) => void,
+): Promise<string | null> {
+  onStage("build");
   const built = await postJson<{ status: "ready" } | { status: "sign"; xdr: string }>(
     base,
     "/api/onboard",
@@ -69,7 +82,9 @@ async function onboardOnce(signer: Signer, base: string): Promise<string | null>
   if (built.status === "ready") return null;
   const tx = TransactionBuilder.fromXDR(built.xdr, NETWORK_PASSPHRASE) as Transaction;
   checkOnboarding(tx, signer.address);
+  onStage("sign");
   const signed = await signer.signTransaction(tx);
+  onStage("submit");
   const { hash } = await postJson<{ hash: string }>(base, "/api/onboard", {
     address: signer.address,
     signed: signed.toXDR(),
@@ -208,10 +223,47 @@ export type ReleaseResult = {
   error?: { code: number | null; detail: string };
 };
 
-export function requestRelease(contribution: string, approved: boolean, base = "") {
-  return postJson<ReleaseResult>(base, approved ? "/api/release" : "/api/release-unapproved", {
-    contribution,
-  });
+/**
+ * Ask the server for a payout, with or without approval. The server streams
+ * each step as it reaches it, which `onStage` hears, and then the result.
+ */
+export async function requestRelease(
+  contribution: string,
+  approved: boolean,
+  base = "",
+  onStage: (stage: ReleaseStage) => void = () => {},
+): Promise<ReleaseResult> {
+  const path = approved ? "/api/release" : "/api/release-unapproved";
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ contribution }),
+    });
+  } catch {
+    throw new Error("The demo server did not respond. Check the connection and try again.");
+  }
+  if (!res.ok || !res.body) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error ?? `${path} failed (${res.status})`);
+  }
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += value;
+    let end: number;
+    while ((end = buffer.indexOf("\n")) >= 0) {
+      const line = JSON.parse(buffer.slice(0, end));
+      buffer = buffer.slice(end + 1);
+      if (line.stage) onStage(line.stage);
+      else if (line.error) throw new Error(line.error);
+      else return line.result as ReleaseResult;
+    }
+  }
+  throw new Error("The demo server stopped answering before the payout finished. Your receipt shows what reached the ledger.");
 }/** The server lost a sequence race to another visitor and asks for a retry. */
 class Busy extends Error {}
 
