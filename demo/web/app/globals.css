@@ -646,6 +646,42 @@ code {
   font-weight: 500;
 }
 
+/* Give: what the donation is doing */
+.events {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cp-2);
+  font: var(--cp-small);
+}
+.events li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.events li > svg,
+.event-dot {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.events li.done {
+  color: var(--cp-ink-2);
+}
+.event-dot {
+  display: grid;
+  place-items: center;
+}
+.event-dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cp-ink);
+}
+
 .balance {
   display: flex;
   flex-direction: column;

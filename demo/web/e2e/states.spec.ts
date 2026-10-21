@@ -15,6 +15,7 @@ test.beforeEach(async ({ page }, info) => {
   await page.addInitScript(() => {
     localStorage.setItem("cipherphi-demo:disclaimer", "1");
     localStorage.setItem("cipherphi-demo:tips", "off");
+    localStorage.setItem("cipherphi-demo:tips-done", "1");
   });
 });
 test.setTimeout(600_000);
@@ -39,11 +40,12 @@ async function shoot(page: Page, name: string) {
  * registered afterwards and lets everything through, because unrouting while a
  * request is held would cancel it.
  */
-function hold(page: Page, url: string | RegExp) {
+/** Holds the matching requests until released; `only` narrows them by request. */
+function hold(page: Page, url: string | RegExp, only?: (route: Route) => boolean) {
   let open: () => void = () => {};
   const gate = new Promise<void>((r) => (open = r));
   const handler = async (route: Route) => {
-    await gate;
+    if (!only || only(route)) await gate;
     await route.continue();
   };
   return {
@@ -87,10 +89,12 @@ test("visitor who releases first", async ({ page }) => {
   await contribute.start();
   await page.getByRole("button", { name: /as zakat/ }).click();
   await expect(page.getByText("Giving…")).toBeVisible();
+  await expect(page.getByText(/^Submitting it to Stellar testnet/)).toBeVisible();
   await shoot(page, "1f-giving");
 
-  // Split loading: hold the ledger reads behind the split.
-  const rpc = hold(page, RPC);
+  // Split loading: hold the pool's balance read behind the split, but not the
+  // confirmation polling the donation itself waits on.
+  const rpc = hold(page, RPC, (r) => r.request().postData()?.includes("simulateTransaction") ?? false);
   await rpc.start();
   await contribute.release();
   await expect(page.locator(".skeleton")).toBeVisible();

@@ -52,6 +52,11 @@ test("give, see it split, see it released, check it", async ({ page }) => {
   await expect(page.getByText(/fewer than 2 of 3 eligibility signers/).first()).toBeVisible();
   const links = page.locator('a[href^="https://stellar.expert/explorer/testnet/tx/"]');
   expect(await links.count()).toBeGreaterThanOrEqual(4);
+  // With the tips off, reaching the receipt ends the demo: a closing message, once.
+  const end = page.getByRole("dialog", { name: "The demo has ended" });
+  await expect(end.getByRole("link", { name: /CipherPhi website/ })).toHaveAttribute("href", "https://www.cipherphi.ch");
+  await end.getByRole("button", { name: "Keep exploring" }).click();
+  await expect(end).toBeHidden();
   await shot(page, "4-receipt");
 
   // The receipt leads back to the demo, where the visitor can leave it and land on the first page.
@@ -61,7 +66,15 @@ test("give, see it split, see it released, check it", async ({ page }) => {
   await page.getByRole("button", { name: "Run the demo again" }).click();
   await expect(page.locator(".figure")).toContainText("7.50");
   await expect(page.locator(".setup")).toHaveCount(0);
+  // Signing out asks first; staying keeps the visitor where they were.
+  const signOut = page.getByRole("dialog", { name: "Sign out?" });
   await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(signOut).toContainText("All your progress in this demo will be lost");
+  await signOut.getByRole("button", { name: "Stay signed in" }).click();
+  await expect(signOut).toBeHidden();
+  await expect(page.locator(".figure")).toContainText("7.50");
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOut.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("button", { name: /^Start$|Sign in/ })).toBeVisible();
   await expect(disclaimer).toBeHidden();
 });
