@@ -15,6 +15,7 @@ type Tips = {
   mount: (id: TipId) => () => void;
   dismiss: (id: TipId) => void;
   skip: () => void;
+  replay: () => void;
 };
 const TipsContext = createContext<Tips | null>(null);
 
@@ -93,36 +94,33 @@ export function TipsProvider({ children }: { children: React.ReactNode }) {
     return TIPS.find(due)?.id ?? null;
   }, [state, mounted]);
 
-  // The end of the demo: the last tip seen, or with the tips off, the receipt
-  // reached. Once, a closing message hands the demo over.
-  const finished =
-    state.ready && (state.off ? mounted.includes("verify") : TIPS.every((t) => state.seen.includes(t.id)));
   const replay = useCallback(() => {
     write("[]");
     setState((s) => ({ ...s, off: false, seen: [] }));
   }, []);
 
-  const value = useMemo(() => ({ active, mount, dismiss, skip }), [active, mount, dismiss, skip]);
-  return (
-    <TipsContext.Provider value={value}>
-      {children}
-      {finished && <DemoEnd onReplay={replay} />}
-    </TipsContext.Provider>
-  );
+  const value = useMemo(() => ({ active, mount, dismiss, skip, replay }), [active, mount, dismiss, skip, replay]);
+  return <TipsContext.Provider value={value}>{children}</TipsContext.Provider>;
 }
 
 const ARCHITECTURE = "https://github.com/Cipher-One-Capital/cipherphi/blob/main/ARCHITECTURE.md";
 const LANDING = "https://www.cipherphi.ch";
 
-/** The closing message at the end of the demo, shown once per browser. */
-function DemoEnd({ onReplay }: { onReplay: () => void }) {
+/**
+ * The closing message, shown once per browser when a visitor opens the receipt
+ * for their own donation: the demo is done, and this is where to read more.
+ */
+export function DemoEnd({ when }: { when: () => boolean }) {
+  const tips = useContext(TipsContext);
   const ref = useRef<HTMLDialogElement>(null);
+  // Checked once, on mount: the caller keys it by donation.
+  const show = useRef(when);
   useEffect(() => {
     let done = false;
     try {
       done = localStorage.getItem(DONE) === "1";
     } catch {}
-    if (!done) ref.current?.showModal();
+    if (!done && show.current()) ref.current?.showModal();
   }, []);
   const remember = () => {
     try {
@@ -131,26 +129,29 @@ function DemoEnd({ onReplay }: { onReplay: () => void }) {
   };
   return (
     <dialog ref={ref} className="disclaimer" aria-labelledby="demo-end-title" onClose={remember}>
-      <h2 id="demo-end-title">The demo has ended</h2>
+      <h2 id="demo-end-title">Demo complete</h2>
       <p>
-        What you just used is a sneak peek of how onchain philanthropy will look in CipherPhi: zakat
-        split by rule, paid out only with approval, and every step on a public ledger.
+        You have followed one zakat donation from start to finish: given, split by rule, paid out only
+        with approval, and checked on a public ledger.
+      </p>
+      <p className="demo-end-more">
+        That is a small part of what CipherPhi does. For the full picture:
       </p>
       <ul>
         <li>
           <a href={ARCHITECTURE} target="_blank" rel="noreferrer">
-            Read the technical architecture ↗
+            The technical architecture ↗
           </a>
         </li>
         <li>
           <a href={LANDING} target="_blank" rel="noreferrer">
-            Visit the CipherPhi website ↗
+            cipherphi.ch ↗
           </a>
         </li>
       </ul>
       <p className="disclaimer-foot">
-        Everything ran on testnet and moved no real money. The demo stays open: run it again, or check
-        each step on Stellar Expert.
+        Everything ran on Stellar testnet and moved no real money. The demo stays open, so you can keep
+        exploring.
       </p>
       <form method="dialog" className="dialog-actions">
         {/* Saved on the click too: the dialog's close event comes a moment
@@ -164,7 +165,7 @@ function DemoEnd({ onReplay }: { onReplay: () => void }) {
             try {
               localStorage.removeItem(DONE);
             } catch {}
-            onReplay();
+            tips?.replay();
           }}
         >
           Replay the tips
@@ -206,7 +207,11 @@ export function Tip({
   // needed, and again if the page shifts or resizes while it is open.
   useEffect(() => {
     if (!open) return;
-    button.current?.focus({ preventScroll: true });
+    // Behind an open dialog, such as the closing message, focus waits for it.
+    const focus = () => button.current?.focus({ preventScroll: true });
+    const modal = document.querySelector("dialog[open]");
+    if (modal) modal.addEventListener("close", focus, { once: true });
+    else focus();
     const reveal = () => {
       const a = anchor.current?.getBoundingClientRect();
       const b = bubble.current?.getBoundingClientRect();
