@@ -1208,18 +1208,20 @@ code {
 }
 .points li {
   position: relative;
-  padding-left: 22px;
+  padding-left: 26px;
 }
+/* A plain tick, drawn as the two strokes of a rotated corner. */
 .points li::before {
   content: "";
   position: absolute;
-  left: 2px;
-  top: 0.62em;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--cp-lime);
-  box-shadow: 0 0 0 1.5px var(--cp-ink);
+  left: 5px;
+  top: 0.3em;
+  width: 6px;
+  height: 12px;
+  border: solid var(--cp-ink);
+  border-width: 0 2.25px 2.25px 0;
+  border-radius: 0 0 1px 0;
+  transform: rotate(45deg);
 }
 
 /* End of the demo */
