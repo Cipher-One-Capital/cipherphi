@@ -18,15 +18,15 @@ test("give, see it split, see it released, check it", async ({ page }) => {
 
   // 1. Give
   await page.getByRole("button", { name: /Sign in with your email|Start with a test wallet/ }).click();
-  await expect(page.getByText("tCHF (testnet)")).toBeVisible();
-  await expect(page.locator(".figure")).toContainText("100");
+  await expect(page.getByText("USDC (testnet)")).toBeVisible();
+  await expect(page.locator(".figure")).toContainText("10.00");
   await shot(page, "1-give");
-  await page.getByRole("button", { name: /Give 50 tCHF/ }).click();
+  await page.getByRole("button", { name: /Give 5 USDC/ }).click();
 
   // 2. Split
   await expect(page.getByRole("heading", { name: "Split", exact: true })).toBeVisible();
   await expect(page.locator(".split .split-row:not(.split-head):not(.split-total)")).toHaveCount(8);
-  await expect(page.locator(".split .split-total")).toContainText("50");
+  await expect(page.locator(".split .split-total")).toContainText("5.00");
   await page.waitForTimeout(900);
   await shot(page, "2-split");
   await page.getByRole("button", { name: "Next: Release" }).click();
