@@ -116,7 +116,8 @@ export default function Demo() {
         )}
       </Header>
 
-      <Stepper step={shown} furthest={Math.min(furthest, seen)} onGo={go} />
+      {/* The first page is the landing card alone; the steps start after it. */}
+      {session.connected && <Stepper step={shown} furthest={Math.min(furthest, seen)} onGo={go} />}
 
       {shown === 0 && (
         <Give
