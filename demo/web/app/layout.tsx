@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import { Disclaimer } from "@/components/Disclaimer";
+import { LiveDonations } from "@/components/LiveDonations";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <strong>Testnet demo.</strong> Uses test tokens only; no real money moves. Contracts are
             unaudited.
           </p>
+          <LiveDonations />
           <Providers>{children}</Providers>
         </div>
         <Disclaimer />

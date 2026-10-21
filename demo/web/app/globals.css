@@ -76,6 +76,58 @@ body {
   font-weight: 600;
 }
 
+/* Live donations strip, under the banner */
+.live {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px var(--cp-3);
+  padding: 9px var(--cp-4);
+  background: var(--cp-surface);
+  border-bottom: var(--cp-border);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: center;
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cp-lime);
+  box-shadow: 0 0 0 1.5px var(--cp-ink);
+  animation: live-pulse 2s ease-in-out infinite;
+}
+.live-label {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.live-item strong {
+  font-weight: 600;
+}
+.live-item a {
+  color: inherit;
+}
+.live-item.fresh {
+  animation: live-in 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.live-count {
+  color: var(--cp-ink-2);
+}
+@keyframes live-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes live-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 .header {
   display: flex;
   align-items: center;
