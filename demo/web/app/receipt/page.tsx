@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { rpc } from "@stellar/stellar-sdk";
+import { Address, rpc } from "@stellar/stellar-sdk";
 import { ExplorerLink, Header } from "@/components/Header";
 import { CATEGORIES, shareFor } from "@/lib/categories";
 import { Hash, InfoIcon } from "@/components/ui";
@@ -109,7 +109,11 @@ const readRefusal = (tx: rpc.Api.GetSuccessfulTransactionResponse | rpc.Api.GetF
   const envelope = tx.envelopeXdr.v1?.().tx();
   const op = envelope?.operations()[0]?.body();
   const call = op?.switch().name === "invokeHostFunction" ? op.invokeHostFunctionOp().hostFunction().invokeContract() : null;
-  if (!call || call.functionName().toString() !== "distribute") {
+  if (
+    !call ||
+    Address.fromScAddress(call.contractAddress()).toString() !== POOL ||
+    call.functionName().toString() !== "distribute"
+  ) {
     return "Not a payout attempt against the demo pool.";
   }
   return { code: 12 };
