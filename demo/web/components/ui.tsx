@@ -29,6 +29,8 @@ const STRIP = [" ", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
  * An amount that rolls to its value digit by digit, like a banking app: it
  * shows `from` first, then each digit turns over to the new one. Digits are
  * aligned from the right, so a figure that grows gains a column on the left.
+ * Each column is as wide as the digit it shows, and the rolling strip is
+ * centred in it and clipped, so the figure reads like ordinary text.
  */
 export function Rolling({ value, from = 0n, delay = 0 }: { value: bigint; from?: bigint; delay?: number }) {
   const [shown, setShown] = useState(from);
@@ -48,6 +50,8 @@ export function Rolling({ value, from = 0n, delay = 0 }: { value: bigint; from?:
         {chars.map((c, i) =>
           digit(c) ? (
             <span key={width - i} className={`roll-col${c === " " ? " blank" : ""}`}>
+              {/* Sizes the column to the digit it shows, so a narrow 1 leaves no gap. */}
+              <span className="roll-size">{c === " " ? "" : c}</span>
               <span className="roll-strip" style={{ "--d": STRIP.indexOf(c) } as React.CSSProperties}>
                 {STRIP.map((d) => (
                   <span key={d}>{d}</span>
