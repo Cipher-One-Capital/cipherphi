@@ -9,6 +9,7 @@ import {
   Keypair,
   Memo,
   Operation,
+  SorobanDataBuilder,
   StrKey,
   Transaction,
   TransactionBuilder,
@@ -33,6 +34,7 @@ import {
   ASSET_CONTRACT,
   STROOPS,
   TREASURY,
+  WASM_HASH,
   attestationScVal,
   contributionFromEvents,
   poolErrorCode,
@@ -99,6 +101,9 @@ export async function buildOnboarding(address: string): Promise<
 > {
   if (!StrKey.isValidEd25519PublicKey(address)) throw new DemoError("not a Stellar address");
   const h = horizon();
+  // Every sign-in is a cheap moment to check the pool's lease, so a donation
+  // never has to renew it. A failure here must not stop the visitor.
+  await keepPoolAlive().catch(() => {});
 
   try {
     const account = await h.loadAccount(address);
@@ -261,7 +266,17 @@ export async function sponsorContribution(signedXdr: string): Promise<string> {
   const inner = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
   if (inner instanceof FeeBumpTransaction) throw new DemoError("already fee-bumped");
   checkContribution(inner);
-  if (BigInt(inner.fee) > MAX_SPONSORED_FEE) throw new DemoError("fee too high to sponsor");
+  if (BigInt(inner.fee) > MAX_SPONSORED_FEE) {
+    // Almost always the pool's storage lease: the contract renews it inside
+    // `contribute` once it runs low, and that rent is the whole fee. Renew it
+    // here instead, and the browser prepares the donation again at a normal fee.
+    if (await keepPoolAlive()) {
+      throw new DemoError("The pool's storage was just renewed. Preparing the donation again.", 409);
+    }
+    throw new DemoError(
+      "Stellar asked a higher fee for this donation than the demo pays. Nothing was sent. Try again in a moment.",
+    );
+  }
 
   const bump = TransactionBuilder.buildFeeBumpTransaction(
     key("TREASURY_SECRET"),
@@ -301,6 +316,56 @@ function checkContribution(tx: Transaction) {
     (amount.i128().hi().toBigInt() << 64n) | amount.i128().lo().toBigInt(),
   );
   if (stroops <= 0n || stroops > GRANT * STROOPS) throw new DemoError("amount out of range");
+}
+
+// --- keeping the pool alive --------------------------------------------------
+
+/**
+ * Renew the pool's lease well before the contract would renew it itself.
+ *
+ * Soroban storage is rented. The contract extends its instance and code to
+ * about 30 days whenever a call finds fewer than 100,000 ledgers left, and
+ * whoever makes that call pays the rent: some 4 XLM, which a sponsored
+ * donation is refused for. Renewing from the treasury while more than this
+ * many ledgers are left means a visitor's donation never carries the rent.
+ */
+const RENEW_BELOW = 150_000;
+/** The same ~30 days the contract extends to. */
+const RENEW_TO = 518_400;
+
+/** True when it renewed the lease, or another request was renewing it. */
+export async function keepPoolAlive(): Promise<boolean> {
+  const server = rpcServer();
+  const keys = [
+    new Contract(POOL).getFootprint(),
+    xdr.LedgerKey.contractCode(new xdr.LedgerKeyContractCode({ hash: Buffer.from(WASM_HASH, "hex") })),
+  ];
+  const [latest, found] = await Promise.all([server.getLatestLedger(), server.getLedgerEntries(...keys)]);
+  if (found.entries.length < keys.length) {
+    throw new DemoError("The demo's pool contract has been archived and needs restoring.", 503);
+  }
+  const left = Math.min(...found.entries.map((e) => (e.liveUntilLedgerSeq ?? 0) - latest.sequence));
+  if (left >= RENEW_BELOW) return false;
+
+  const treasury = key("TREASURY_SECRET");
+  const tx = new TransactionBuilder(await server.getAccount(treasury.publicKey()), {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(Operation.extendFootprintTtl({ extendTo: RENEW_TO }))
+    .setSorobanData(new SorobanDataBuilder().setReadOnly(keys).build())
+    .setTimeout(60)
+    .build();
+  const sim = await server.simulateTransaction(tx);
+  if (rpc.Api.isSimulationError(sim)) throw new DemoError(`the pool's lease could not be renewed: ${sim.error}`, 502);
+  const renew = rpc.assembleTransaction(tx, sim).build();
+  renew.sign(treasury);
+  const result = await sendAndWait(renew);
+  // A sequence clash means another request is renewing it at the same moment.
+  if (!result.ok && result.detail !== "txBadSeq" && result.detail !== "TRY_AGAIN_LATER") {
+    throw new DemoError(`the pool's lease could not be renewed: ${result.detail}`, 502);
+  }
+  return true;
 }
 
 // --- 3. the payout -----------------------------------------------------------

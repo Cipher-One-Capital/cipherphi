@@ -40,7 +40,7 @@ async function postJson<T>(base: string, path: string, body: unknown): Promise<T
     throw new Error("The demo server did not respond. Check the connection and try again.");
   }
   const json = await res.json().catch(() => ({}));
-  if (res.status === 409 && path === "/api/onboard") throw new Busy(json.error);
+  if (res.status === 409) throw new Busy(json.error);
   if (!res.ok) throw new Error(json.error ?? `${path} failed (${res.status})`);
   return json as T;
 }
@@ -140,6 +140,23 @@ export async function donate(
   stroops: bigint,
   base = "",
   onStage: (stage: DonateStage) => void = () => {},
+): Promise<string> {
+  // The server answers 409 when it had to renew the pool's storage first;
+  // the donation is then prepared and signed again, at the normal fee.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await donateOnce(signer, stroops, base, onStage);
+    } catch (err) {
+      if (!(err instanceof Busy) || attempt >= 2) throw err;
+    }
+  }
+}
+
+async function donateOnce(
+  signer: Signer,
+  stroops: bigint,
+  base: string,
+  onStage: (stage: DonateStage) => void,
 ): Promise<string> {
   const server = rpcServer();
   onStage("check");
@@ -264,7 +281,9 @@ export async function requestRelease(
     }
   }
   throw new Error("The demo server stopped answering before the payout finished. Your receipt shows what reached the ledger.");
-}/** The server lost a sequence race to another visitor and asks for a retry. */
+}
+
+/** The server lost a race, or renewed the pool first, and asks for a retry. */
 class Busy extends Error {}
 
 
