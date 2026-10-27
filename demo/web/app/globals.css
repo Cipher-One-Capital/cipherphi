@@ -511,13 +511,6 @@ button:focus-visible,
 
 /* --- status, error, note -------------------------------------------------- */
 
-.status {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin: 0;
-  font: var(--cp-small);
-}
 .spinner {
   flex: none;
   animation: spin 0.9s linear infinite;
@@ -619,34 +612,56 @@ code {
   margin-bottom: var(--cp-1);
 }
 
-.setup {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+/* Rolling figures: each digit is a strip of blank and 0 to 9, moved to its
+   digit. A blank column closes up, so a figure that shrinks loses it. */
+.roll {
+  display: inline-flex;
+  font-variant-numeric: tabular-nums;
+  /* Lets a new column grow in from width 0 to its digit's width. */
+  interpolate-size: allow-keywords;
+}
+.roll > span[aria-hidden] {
+  display: inline-flex;
+}
+/* `overflow: clip`, not `hidden`: hidden would put the column's baseline at
+   its bottom edge and drop the text beside the figure below the line. */
+.roll-col {
+  position: relative;
+  display: inline-block;
+  height: 1.15em;
+  line-height: 1.15em;
+  overflow: clip;
+  transition: width 500ms ease;
+}
+.roll-col.blank {
+  width: 0;
+}
+.roll-size {
+  visibility: hidden;
+}
+.roll-strip {
+  position: absolute;
+  top: 0;
+  left: 50%;
   display: flex;
   flex-direction: column;
-  gap: var(--cp-5);
+  align-items: center;
+  transform: translate(-50%, calc(var(--d) * -1.15em));
+  transition: transform 900ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-.setup li {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
+.roll-strip > span,
+.roll > span[aria-hidden] > span:not(.roll-col) {
+  height: 1.15em;
+  line-height: 1.15em;
 }
-.setup li > svg {
-  flex: none;
-}
-.setup p {
-  margin: 0;
-  font: var(--cp-body);
-}
-.setup li.done p {
-  color: var(--cp-ink-2);
-}
-.setup li.active p {
-  font-weight: 500;
+@media (prefers-reduced-motion: reduce) {
+  .roll-col,
+  .roll-strip {
+    transition: none;
+  }
 }
 
-/* Give: what the donation is doing */
+/* What the page is waiting on: one line per step */
 .events {
   margin: 0;
   padding: 0;
@@ -680,6 +695,15 @@ code {
   height: 6px;
   border-radius: 50%;
   background: var(--cp-ink);
+  animation: event-pulse 1.2s ease-in-out infinite;
+}
+@keyframes event-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+.rail .event-dot {
+  margin-top: 3px;
 }
 
 .balance {
@@ -694,7 +718,7 @@ code {
   gap: 10px;
   flex-wrap: wrap;
 }
-.figure span {
+.figure > span {
   font: var(--cp-figure);
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -727,15 +751,18 @@ code {
 }
 .split-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr) 96px 128px;
-  gap: var(--cp-4);
-  align-items: center;
-  padding: var(--cp-3) 0;
+  grid-template-columns: minmax(0, 1fr) 96px 168px;
+  column-gap: var(--cp-5);
   border-bottom: 1px solid rgba(14, 14, 18, 0.08);
 }
+.split-row > * {
+  padding: var(--cp-3) 0;
+}
 .split-head {
-  padding: 0 0 10px;
   border-bottom-color: rgba(14, 14, 18, 0.16);
+}
+.split-head > * {
+  padding: 0 0 10px;
 }
 .split-head span {
   font: var(--cp-label);
@@ -743,20 +770,50 @@ code {
   text-transform: uppercase;
   color: var(--cp-ink-2);
 }
-.split .num {
+.split .num,
+.skeleton .num {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 2px;
   text-align: right;
   font-size: 15px;
   line-height: 20px;
 }
 .split-head .num {
+  justify-content: flex-end;
   font-size: 12px;
   line-height: 16px;
 }
 .split .gift {
   font-weight: 500;
 }
-.split .pool {
-  color: var(--cp-ink-2);
+/* The pool reads as its own card down the right: one shaded column, rounded
+   at the top and bottom, with the donor's zakat added in green. */
+.split .pool,
+.skeleton .pool {
+  padding-right: var(--cp-4);
+  padding-left: var(--cp-4);
+  background: var(--cp-panel);
+}
+.split-head .pool {
+  padding-top: var(--cp-3);
+  border-radius: var(--cp-r-inner) var(--cp-r-inner) 0 0;
+  color: var(--cp-ink);
+}
+.split-total .pool,
+.skeleton .split-row:last-child .pool {
+  border-radius: 0 0 var(--cp-r-inner) var(--cp-r-inner);
+}
+.skeleton .split-row:first-child .pool {
+  border-radius: var(--cp-r-inner) var(--cp-r-inner) 0 0;
+}
+.split .added {
+  color: var(--cp-gain);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
 }
 .cat {
   display: flex;
@@ -779,36 +836,42 @@ code {
 .share-bar {
   display: block;
   width: 0;
+  max-width: 280px;
+  margin-top: 6px;
   transition: width 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
   transition-delay: calc(var(--i, 0) * 60ms);
-  height: 10px;
+  height: 8px;
   background: var(--cp-lime);
   border-radius: 2px;
-}
-.share-bar.narrow {
-  display: none;
 }
 .split.in .share-bar {
   width: var(--w);
 }
 .split-total {
-  padding: 14px 0 0;
   border-bottom: 0;
   border-top: 1.5px solid var(--cp-ink);
   margin-top: -1px;
 }
-.split-total span {
+.split-total > * {
+  padding: 14px 0 var(--cp-3);
+}
+.split-total .pool {
+  padding-right: var(--cp-4);
+  padding-left: var(--cp-4);
+}
+.split-total .cat > span:first-child,
+.split-total .num > span:first-child,
+.split-total .gift {
   font-size: 15px;
   line-height: 20px;
   font-weight: 600;
 }
-.split-total .cat-sub {
-  font-size: 13px;
-  font-weight: 400;
-}
 
-.skeleton .split-row {
+.skeleton .split-row > * {
   padding: 14px 0;
+}
+.skeleton .split-row > .pool {
+  padding: 14px var(--cp-4);
 }
 .skeleton i {
   display: block;
@@ -817,9 +880,6 @@ code {
 }
 .skeleton .cat {
   gap: 6px;
-}
-.skeleton .num {
-  justify-self: end;
 }
 
 /* --- release -------------------------------------------------------------- */
@@ -1063,9 +1123,6 @@ code {
   background: var(--cp-muted-mark);
   border: 0;
 }
-.rail .spinner {
-  margin-top: 2px;
-}
 .rail .line {
   flex: 1 1 auto;
   width: 2px;
@@ -1281,6 +1338,9 @@ code {
 .disclaimer p {
   margin: 0;
 }
+.disclaimer .demo-end-more {
+  margin-top: var(--cp-3);
+}
 .disclaimer ul {
   margin: var(--cp-4) 0 var(--cp-5);
   padding-left: 20px;
@@ -1479,22 +1539,18 @@ code {
   .symbol-sm {
     display: block;
   }
-  .figure span {
+  .figure > span {
     font-size: 44px;
   }
+  /* The pool column carries the donor's zakat in green, so the separate
+     column goes. */
   .split-row {
-    grid-template-columns: minmax(0, 1fr) 80px;
-    gap: var(--cp-3);
-    align-items: start;
+    grid-template-columns: minmax(0, 1fr) 104px;
+    column-gap: var(--cp-3);
   }
-  .split .wide,
-  .skeleton .wide {
+  .split .gift,
+  .skeleton .gift {
     display: none;
-  }
-  .share-bar.narrow {
-    display: block;
-    height: 8px;
-    margin-top: 6px;
   }
   .role-cards {
     grid-template-columns: minmax(0, 1fr);

@@ -71,7 +71,7 @@ test("visitor who releases first", async ({ page }) => {
   const onboard = hold(page, "**/api/onboard");
   await onboard.start();
   await page.getByRole("button", { name: /^Start$|Sign in/ }).click();
-  await expect(page.locator(".setup li")).toHaveCount(2);
+  await expect(page.locator(".events li")).toHaveCount(2);
   await shoot(page, "1d-setup");
   await onboard.release();
 

@@ -26,8 +26,16 @@ async function tip(page: Page, title: string) {
     }))
     .toBe(true);
   await expect(bubble.getByRole("button", { name: "Got it" })).toBeFocused();
-  // Measure contrast once the bubble has faded in, not halfway through.
-  await bubble.evaluate((e) => Promise.all(e.getAnimations().map((a) => a.finished)));
+  // Measure contrast once the bubble, and anything else sliding in (a new
+  // donation in the live strip), has finished animating, not halfway through.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+        .map((a) => a.finished),
+    ),
+  );
   const axe = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .exclude("nextjs-portal")
@@ -97,15 +105,16 @@ test("first visit, with tips", async ({ page }) => {
 
   await tip(page, "Check it yourself");
   await page.getByRole("link", { name: "Open your receipt" }).click();
-  await tip(page, "Verify the system");
-  await gotIt(page);
 
-  // The last tip ends the demo with a closing message, once.
-  const done = page.getByRole("dialog", { name: "The demo has ended" });
+  // Opening the receipt ends the demo with a closing message, once; the last
+  // tip follows it.
+  const done = page.getByRole("dialog", { name: "Demo complete" });
   await expect(done).toBeVisible();
   await expect(done.getByRole("link", { name: /technical architecture/ })).toHaveAttribute("href", /ARCHITECTURE\.md$/);
   if (OUT) await page.screenshot({ path: `${OUT}/7-tip-99-demo-end-1280.png` });
   await done.getByRole("button", { name: "Keep exploring" }).click();
+  await tip(page, "Verify the system");
+  await gotIt(page);
   await expect(done).toBeHidden();
   await page.reload();
   await expect(page.getByRole("heading", { name: "Receipt", exact: true })).toBeVisible();

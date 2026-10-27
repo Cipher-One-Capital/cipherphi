@@ -3,11 +3,11 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { rpc } from "@stellar/stellar-sdk";
+import { Address, rpc } from "@stellar/stellar-sdk";
 import { ExplorerLink, Header } from "@/components/Header";
 import { CATEGORIES, shareFor } from "@/lib/categories";
-import { Hash, InfoIcon, Spinner } from "@/components/ui";
-import { Tip } from "@/components/Tips";
+import { Hash, InfoIcon } from "@/components/ui";
+import { DemoEnd, Tip } from "@/components/Tips";
 import {
   ASSET_CONTRACT,
   PARTNER,
@@ -109,11 +109,33 @@ const readRefusal = (tx: rpc.Api.GetSuccessfulTransactionResponse | rpc.Api.GetF
   const envelope = tx.envelopeXdr.v1?.().tx();
   const op = envelope?.operations()[0]?.body();
   const call = op?.switch().name === "invokeHostFunction" ? op.invokeHostFunctionOp().hostFunction().invokeContract() : null;
-  if (!call || call.functionName().toString() !== "distribute") {
+  if (
+    !call ||
+    Address.fromScAddress(call.contractAddress()).toString() !== POOL ||
+    call.functionName().toString() !== "distribute"
+  ) {
     return "Not a payout attempt against the demo pool.";
   }
   return { code: 12 };
 };
+
+/**
+ * True when this browser ran the demo that made donation `c`: its progress is
+ * kept under `cipherphi-demo:<address>`. A receipt opened from a shared link
+ * is someone else's, and gets no closing message.
+ */
+function ownDonation(c: string | null) {
+  if (!c) return false;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("cipherphi-demo:G") && JSON.parse(localStorage.getItem(key)!).contribution === c) {
+        return true;
+      }
+    }
+  } catch {}
+  return false;
+}
 
 function Receipt() {
   const q = useSearchParams();
@@ -137,6 +159,8 @@ function Receipt() {
 
   return (
     <>
+      {/* Opening the receipt for their own donation is where the demo ends. */}
+      <DemoEnd key={q.get("c")} when={() => ownDonation(q.get("c"))} />
       <section className="card">
         <div className="card-head">
           <h1>Receipt</h1>
@@ -271,7 +295,11 @@ function Step({
   return (
     <li className={`entry ${state}`}>
       <div className="rail" aria-hidden="true">
-        {state === "loading" ? <Spinner size={18} /> : <span className={`dot${refused ? " refused" : ""}`} />}
+        {state === "loading" ? (
+          <span className="event-dot" />
+        ) : (
+          <span className={`dot${refused ? " refused" : ""}`} />
+        )}
         <span className="line" />
       </div>
       <div className="entry-body">

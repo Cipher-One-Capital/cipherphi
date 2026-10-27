@@ -69,7 +69,7 @@ export function Stepper({
         })}
       </ol>
       <p className="step-of" aria-hidden="true">
-        <span>Step {step + 1} of 4 · </span>
+        <span>Step {step + 1} of {STEPS.length} · </span>
         <strong>{STEPS[step]}</strong>
       </p>
     </nav>

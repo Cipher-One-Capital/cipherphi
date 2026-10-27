@@ -9,6 +9,7 @@ import {
   Keypair,
   Memo,
   Operation,
+  SorobanDataBuilder,
   StrKey,
   Transaction,
   TransactionBuilder,
@@ -28,10 +29,12 @@ import {
   PARTNER,
   PAYOUT,
   PAYOUT_CATEGORY,
+  type ReleaseStage,
   POOL,
   ASSET_CONTRACT,
   STROOPS,
   TREASURY,
+  WASM_HASH,
   attestationScVal,
   contributionFromEvents,
   poolErrorCode,
@@ -98,6 +101,9 @@ export async function buildOnboarding(address: string): Promise<
 > {
   if (!StrKey.isValidEd25519PublicKey(address)) throw new DemoError("not a Stellar address");
   const h = horizon();
+  // Every sign-in is a cheap moment to check the pool's lease, so a donation
+  // never has to renew it. A failure here must not stop the visitor.
+  await keepPoolAlive().catch(() => {});
 
   try {
     const account = await h.loadAccount(address);
@@ -260,7 +266,17 @@ export async function sponsorContribution(signedXdr: string): Promise<string> {
   const inner = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
   if (inner instanceof FeeBumpTransaction) throw new DemoError("already fee-bumped");
   checkContribution(inner);
-  if (BigInt(inner.fee) > MAX_SPONSORED_FEE) throw new DemoError("fee too high to sponsor");
+  if (BigInt(inner.fee) > MAX_SPONSORED_FEE) {
+    // Almost always the pool's storage lease: the contract renews it inside
+    // `contribute` once it runs low, and that rent is the whole fee. Renew it
+    // here instead, and the browser prepares the donation again at a normal fee.
+    if (await keepPoolAlive()) {
+      throw new DemoError("The pool's storage was just renewed. Preparing the donation again.", 409);
+    }
+    throw new DemoError(
+      "Stellar asked a higher fee for this donation than the demo pays. Nothing was sent. Try again in a moment.",
+    );
+  }
 
   const bump = TransactionBuilder.buildFeeBumpTransaction(
     key("TREASURY_SECRET"),
@@ -302,6 +318,56 @@ function checkContribution(tx: Transaction) {
   if (stroops <= 0n || stroops > GRANT * STROOPS) throw new DemoError("amount out of range");
 }
 
+// --- keeping the pool alive --------------------------------------------------
+
+/**
+ * Renew the pool's lease well before the contract would renew it itself.
+ *
+ * Soroban storage is rented. The contract extends its instance and code to
+ * about 30 days whenever a call finds fewer than 100,000 ledgers left, and
+ * whoever makes that call pays the rent: some 4 XLM, which a sponsored
+ * donation is refused for. Renewing from the treasury while more than this
+ * many ledgers are left means a visitor's donation never carries the rent.
+ */
+const RENEW_BELOW = 150_000;
+/** The same ~30 days the contract extends to. */
+const RENEW_TO = 518_400;
+
+/** True when it renewed the lease, or another request was renewing it. */
+export async function keepPoolAlive(): Promise<boolean> {
+  const server = rpcServer();
+  const keys = [
+    new Contract(POOL).getFootprint(),
+    xdr.LedgerKey.contractCode(new xdr.LedgerKeyContractCode({ hash: Buffer.from(WASM_HASH, "hex") })),
+  ];
+  const [latest, found] = await Promise.all([server.getLatestLedger(), server.getLedgerEntries(...keys)]);
+  if (found.entries.length < keys.length) {
+    throw new DemoError("The demo's pool contract has been archived and needs restoring.", 503);
+  }
+  const left = Math.min(...found.entries.map((e) => (e.liveUntilLedgerSeq ?? 0) - latest.sequence));
+  if (left >= RENEW_BELOW) return false;
+
+  const treasury = key("TREASURY_SECRET");
+  const tx = new TransactionBuilder(await server.getAccount(treasury.publicKey()), {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(Operation.extendFootprintTtl({ extendTo: RENEW_TO }))
+    .setSorobanData(new SorobanDataBuilder().setReadOnly(keys).build())
+    .setTimeout(60)
+    .build();
+  const sim = await server.simulateTransaction(tx);
+  if (rpc.Api.isSimulationError(sim)) throw new DemoError(`the pool's lease could not be renewed: ${sim.error}`, 502);
+  const renew = rpc.assembleTransaction(tx, sim).build();
+  renew.sign(treasury);
+  const result = await sendAndWait(renew);
+  // A sequence clash means another request is renewing it at the same moment.
+  if (!result.ok && result.detail !== "txBadSeq" && result.detail !== "TRY_AGAIN_LATER") {
+    throw new DemoError(`the pool's lease could not be renewed: ${result.detail}`, 502);
+  }
+  return true;
+}
+
 // --- 3. the payout -----------------------------------------------------------
 
 export type Release = {
@@ -328,8 +394,13 @@ export type Release = {
  * the refusal is a failed transaction anyone can look up, not a claim the UI
  * makes.
  */
-export async function release(contributionHash: string, approved: boolean): Promise<Release> {
+export async function release(
+  contributionHash: string,
+  approved: boolean,
+  onStage: (stage: ReleaseStage) => void = () => {},
+): Promise<Release> {
   if (!/^[0-9a-f]{64}$/.test(contributionHash)) throw new DemoError("not a transaction hash");
+  onStage("check");
   await requireContribution(contributionHash);
 
   const marker = hash(Buffer.concat([
@@ -351,12 +422,14 @@ export async function release(contributionHash: string, approved: boolean): Prom
   if (signers[0].publicKey() !== AUTHORITY[0] || signers[1].publicKey() !== AUTHORITY[1]) {
     throw new DemoError("authority keys on the server do not match the deployment", 500);
   }
+  onStage("mark");
   await sendMarker(distributor, marker);
 
   // Attestations are consumed strictly in sequence. Two visitors releasing at
   // the same moment would sign for the same slot, so a lost race re-reads the
   // sequence and tries again.
   for (let attempt = 0; attempt < 4; attempt++) {
+    onStage("approve");
     const latest = await server.getLatestLedger();
     const sequence = await readSequence(server);
     const attestation = {
@@ -438,7 +511,8 @@ export async function release(contributionHash: string, approved: boolean): Prom
     }
     tx.sign(distributor);
 
-    const result = await sendAndWait(tx);
+    onStage("submit");
+    const result = await sendAndWait(tx, undefined, () => onStage("confirm"));
     if (!result.ok && poolErrorCode(result.detail) === 10 && approved) continue;
     // Another visitor's payout used the distributor's sequence number first:
     // a race on our side, not the pool's answer, so build it again.
@@ -526,6 +600,7 @@ async function droppedFromChannel(tx: Transaction): Promise<boolean> {
 async function sendAndWait(
   tx: Transaction | FeeBumpTransaction,
   dropped?: () => Promise<boolean>,
+  onAccepted?: () => void,
 ): Promise<{ hash: string; ok: boolean; detail: string }> {
   const server = rpcServer();
   const sent = await server.sendTransaction(tx);
@@ -533,6 +608,7 @@ async function sendAndWait(
     return { hash: sent.hash, ok: false, detail: describeResult(sent.errorResult) };
   }
   if (sent.status === "TRY_AGAIN_LATER") return { hash: sent.hash, ok: false, detail: "TRY_AGAIN_LATER" };
+  onAccepted?.();
   let final = await server.getTransaction(sent.hash);
   for (let i = 0; i < 30 && final.status === rpc.Api.GetTransactionStatus.NOT_FOUND; i++) {
     await new Promise((r) => setTimeout(r, 1000));

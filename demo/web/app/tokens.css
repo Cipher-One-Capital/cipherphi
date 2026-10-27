@@ -18,6 +18,7 @@
   --cp-muted-mark: #8A8A94;   /* not-reached ring, missing-transaction dot */
   --cp-error: #9A3B2E;        /* 6.91:1 on white */
   --cp-error-bg: #FFF5F2;
+  --cp-gain: #1E7B3C;         /* added amounts; 4.96:1 on panel, 5.31:1 on white */
 
   /* type */
   --cp-font: "DM Sans", ui-sans-serif, system-ui, sans-serif;

@@ -52,6 +52,10 @@ This is a demonstration, not the funded build. The differences are deliberate, a
 
 Each visitor costs the treasury 10 USDC. Circle's faucet sends only 20 USDC per request, so the treasury buys its USDC on the testnet exchange instead, which has a large XLM/USDC pool. `node scripts/top-up.mjs 5000` opens a throwaway account from friendbot, swaps its test XLM for 5000 USDC paid straight to the treasury, and merges the rest of its XLM into the treasury too. That funds 500 visitors. When the treasury runs low, onboarding stops with "The demo has run out of test USDC" until the next top-up.
 
+## Keeping the pool from expiring
+
+Soroban storage is rented. The pool extends its own instance and code to about 30 days whenever a call finds fewer than 100,000 ledgers left, and that rent (about 4 XLM) lands on whichever donation makes the call, which the server refuses to sponsor. So the server renews the lease from the treasury on every sign-in once fewer than 150,000 ledgers are left, and if a donation still arrives carrying the rent, it renews first and has the browser prepare the donation again. Anyone can pay for a renewal: if the demo sits unused for a month, extend the pool instance and its code with any funded testnet account before the code is archived.
+
 ## Vercel
 
 The site is the Vercel project for `demo/web`. Production deploys from `main`; every pull request gets a preview link.
