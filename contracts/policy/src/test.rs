@@ -5,7 +5,9 @@ extern crate std;
 
 use soroban_sdk::{
     testutils::{Address as _, MockAuth, MockAuthInvoke},
-    vec, Address, Env, IntoVal, Vec,
+    vec,
+    xdr::ToXdr,
+    Address, Env, IntoVal, Vec,
 };
 
 use crate::{
@@ -331,4 +333,26 @@ fn a_caller_other_than_the_controller_cannot_set_anything() {
         },
     }]);
     assert!(client.try_set_parameters(&parameters()).is_err());
+}
+
+/// The deploy script builds the constructor arguments by hand in JavaScript. These
+/// are its bytes, for the placeholder values. If they drift from what this contract
+/// decodes, the failure belongs here rather than on the network.
+#[test]
+fn the_deploy_script_encodes_arguments_as_the_contract_decodes_them() {
+    fn hex(value: soroban_sdk::Bytes) -> std::string::String {
+        value
+            .iter()
+            .map(|byte| std::format!("{:02x}", byte))
+            .collect()
+    }
+    let env = Env::default();
+    assert_eq!(
+        hex(allocation(&env, &PLACEHOLDER, Category::Poor).to_xdr(&env)),
+        "0000001100000001000000020000000f0000000972656d61696e64657200000000000003000000000000000f0000000973706c69745f6270730000000000001000000001000000080000000300000bb800000003000007d000000003000003e800000003000001f400000003000001f400000003000005dc00000003000003e800000003000001f4"
+    );
+    assert_eq!(
+        hex(parameters().to_xdr(&env)),
+        "0000001100000001000000040000000f0000000c616d696c5f6361705f62707300000003000004e20000000f000000106469736368617267655f74696d696e6700000003000000000000000f0000000b6e697361625f62617369730000000003000000000000000f00000008726174655f62707300000003000000fa"
+    );
 }
