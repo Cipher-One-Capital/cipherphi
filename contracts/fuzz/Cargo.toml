@@ -1,0 +1,39 @@
+[package]
+name = "cipherphi_fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+
+[dependencies]
+libfuzzer-sys = { version = "0.4", features = ["arbitrary-derive"] }
+soroban-sdk = { version = "27.0.6", features = ["testutils"] }
+ed25519-dalek = "2.2.0"
+cipherphi_interface = { path = "../interface" }
+zakat_pool = { path = "../zakat_pool" }
+policy = { path = "../policy" }
+attestation = { path = "../attestation" }
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "contribute"
+path = "fuzz_targets/contribute.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "distribute"
+path = "fuzz_targets/distribute.rs"
+test = false
+doc = false
+
+[profile.release]
+debug = 1
+overflow-checks = true
