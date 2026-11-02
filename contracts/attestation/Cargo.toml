@@ -1,0 +1,21 @@
+[package]
+name = "attestation"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+cipherphi_interface = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+# Off-chain signer, test side only. The contract verifies with the host's
+# ed25519 function; a third-party signer proves it agrees with something other
+# than itself.
+ed25519-dalek = { workspace = true }

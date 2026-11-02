@@ -1,0 +1,19 @@
+{
+  "purpose": "Known-answer vector for the bytes an authority key signs. This is the reference for a signer implemented outside this crate, in any language: build the same eight fields, produce the same XDR, and an ed25519 signature over it will verify inside the contract. The test attestation_xdr_matches_the_committed_vector regenerates every value below from the SDK and fails if any of them drifts.",
+  "encoding": "The attestation is a soroban #[contracttype] struct, so its XDR is an ScVal of type ScMap with one entry per field, keyed by ScSymbol, and the entries are ordered by field name rather than by declaration order: amount, asset, category, expiry_ledger, network_id, pool, recipient, sequence. There is no domain separator and no length prefix around the struct. The bytes below are the whole preimage.",
+  "sdk": "soroban-sdk 27.0.6",
+  "attestation": {
+    "recipient": "GDQNY3PBOJOKYZSRMK2S7LHHGWZIUISD4QORETLMXEWXBI7KFZZMKTL3",
+    "asset": "CA3D5KRYM6CB7OWQ6TWYRR3Z4T7GNZLKERYNZGGA5SOAOPIFY6YQGAXE",
+    "category": "Poor",
+    "amount": "250000",
+    "sequence": "7",
+    "expiry_ledger": "1000",
+    "pool": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+    "network_id": "0707070707070707070707070707070707070707070707070707070707070707"
+  },
+  "signed_bytes_hex": "0000001100000001000000080000000f00000006616d6f756e7400000000000a0000000000000000000000000003d0900000000f0000000561737365740000000000001200000001363eaa3867841fbad0f4ed88c779e4fe66e56a2470dc98c0ec9c073d05c7b1030000000f0000000863617465676f727900000003000000000000000f0000000d6578706972795f6c656467657200000000000003000003e80000000f0000000a6e6574776f726b5f696400000000000d0000002007070707070707070707070707070707070707070707070707070707070707070000000f00000004706f6f6c0000001200000001d7928b72c2703ccfeaf7eb9ff4ef4d504a55a8b979fc9b450ea2c842b4d1ce610000000f00000009726563697069656e74000000000000120000000000000000e0dc6de1725cac665162b52face735b28a2243e41d124d6cb92d70a3ea2e72c50000000f0000000873657175656e6365000000050000000000000007",
+  "signer_seed_hex": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+  "signer_public_key_hex": "66be7e332c7a453332bd9d0a7f7db055f5c5ef1a06ada66d98b39fb6810c473a",
+  "signature_hex": "6800f3ba16be0ccda736cfc7ed8f41ff0bc6247d4c462ea77dd3d114149f94e84b6d0545c79ca6ea636afab0f55d0dacbd000180c94b8eece3082e80d35dc809"
+}
