@@ -53,13 +53,13 @@ fuzz_target!(|input: Input| {
     }
     assert_eq!(h.claimed(), credited);
 
-    // A direct transfer is surplus: it moves the balance and no bucket.
+    // Tokens that reach the pool without `contribute` are surplus: they move the
+    // balance and no bucket. Minted, because the gifts may have spent the donor.
     if input.surplus > 0 {
-        soroban_sdk::token::Client::new(&h.env, &h.asset).transfer(
-            &h.donor,
-            &h.pool,
-            &(input.surplus as i128),
-        );
+        let held = h.held();
+        soroban_sdk::token::StellarAssetClient::new(&h.env, &h.asset)
+            .mint(&h.pool, &(input.surplus as i128));
+        assert_eq!(h.held(), held + input.surplus as i128);
         assert_eq!(h.claimed(), credited);
         h.assert_invariant();
     }
