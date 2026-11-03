@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # Vercel's Ignored Build Step for every project in this repo. Exit 0 skips the
-# build, exit 1 builds. Previews are opt-in to save build minutes: a branch
-# other than production builds only when its last commit message says
-# "[preview]", in any case. VERCEL_ENV and VERCEL_GIT_COMMIT_MESSAGE are not
-# always set here, so the branch comes from VERCEL_GIT_COMMIT_REF and the
-# message from git.
+# build, exit 1 builds. Only production builds: preview deployments for branches
+# and pull requests are off. A redeploy started by hand in Vercel still builds.
+# VERCEL_ENV is not always set here, so the branch comes from
+# VERCEL_GIT_COMMIT_REF.
 
 production_branch="${PRODUCTION_BRANCH:-main}"
 branch="${VERCEL_GIT_COMMIT_REF:-}"
@@ -24,13 +23,5 @@ if [ -n "${VERCEL_GIT_COMMIT_SHA:-}" ] && [ "${VERCEL_GIT_PREVIOUS_SHA:-}" = "$V
   exit 1
 fi
 
-message="$(git log -1 --format=%B 2>/dev/null || true)"
-message="${message:-${VERCEL_GIT_COMMIT_MESSAGE:-}}"
-
-if printf '%s' "$message" | grep -qi '\[preview\]'; then
-  echo "Preview asked for on $branch: building."
-  exit 1
-fi
-
-echo "No [preview] in the last commit on $branch: skipping. To build one, push a commit whose message contains [preview]."
+echo "Previews are off: skipping $branch."
 exit 0
