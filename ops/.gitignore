@@ -1,0 +1,10 @@
+# Test keys and private-network deployments. Never committed.
+.secrets*.json
+deployment.local.json
+.env*
+
+# Build output and the regenerated source archive. Rebuilt on demand.
+.build/
+out/
+sources/
+node_modules/
