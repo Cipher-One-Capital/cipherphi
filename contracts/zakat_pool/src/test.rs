@@ -1357,10 +1357,17 @@ fn parameters_change_through_the_timelock() {
     assert_eq!(PolicyClient::new(&f.env, &f.policy).parameters(), next);
 }
 
+fn policy_answering_to(f: &Fixture, controller: &Address) -> Address {
+    f.env.register(
+        Policy,
+        PolicyArgs::__constructor(controller, &allocation(&f.env, &PLACEHOLDER), &parameters()),
+    )
+}
+
 #[test]
 fn policy_and_attestation_repoint_through_the_timelock() {
     let f = setup();
-    let new_policy = Address::generate(&f.env);
+    let new_policy = policy_answering_to(&f, &f.pool);
     let new_attestation = Address::generate(&f.env);
 
     let after = f
@@ -1378,6 +1385,34 @@ fn policy_and_attestation_repoint_through_the_timelock() {
     f.past_timelock(after);
     f.client().execute_change();
     assert_eq!(f.client().attestation(), new_attestation);
+}
+
+#[test]
+fn a_policy_answering_to_someone_else_is_refused_and_stays_queued() {
+    let f = setup();
+    let rogue = policy_answering_to(&f, &f.governance);
+    let after = f.client().propose_change(&Change::SetPolicy(rogue));
+    f.past_timelock(after);
+    assert_eq!(
+        f.client().try_execute_change(),
+        Err(Ok(Error::PolicyControllerMismatch))
+    );
+    assert_eq!(f.client().policy(), f.policy);
+    assert!(f.client().pending_change().is_some());
+}
+
+#[test]
+fn a_policy_address_with_no_contract_is_refused() {
+    let f = setup();
+    let after = f
+        .client()
+        .propose_change(&Change::SetPolicy(Address::generate(&f.env)));
+    f.past_timelock(after);
+    assert_eq!(
+        f.client().try_execute_change(),
+        Err(Ok(Error::PolicyControllerMismatch))
+    );
+    assert_eq!(f.client().policy(), f.policy);
 }
 
 #[test]

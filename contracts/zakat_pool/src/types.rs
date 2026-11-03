@@ -103,6 +103,8 @@ pub enum Error {
     PolicyRefused = 27,
     /// Governance and the distributor would be the same address.
     RolesOverlap = 28,
+    /// The `policy` being pointed to does not name this pool as its controller.
+    PolicyControllerMismatch = 29,
 }
 
 /// Emitted by `contribute`. Carries the whole split, 8 amounts in [`Category`]

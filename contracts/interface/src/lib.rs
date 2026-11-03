@@ -144,6 +144,8 @@ pub trait PolicyInterface {
     fn set_allocation(env: Env, allocation: Allocation);
     /// Replace the parameters. Authorised by the policy's controller.
     fn set_parameters(env: Env, parameters: Parameters);
+    /// The one address the setters answer to.
+    fn controller(env: Env) -> Address;
 }
 
 /// What `zakat_pool` needs from `attestation`.

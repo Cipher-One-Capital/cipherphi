@@ -296,7 +296,17 @@ impl ZakatPool {
 
         let storage = env.storage().instance();
         match change.clone() {
-            Change::SetPolicy(address) => storage.set(&DataKey::PolicyAddr, &address),
+            Change::SetPolicy(address) => {
+                // A replacement that answered to anyone else would take
+                // parameter changes out from behind this timelock. This
+                // catches a deploy mistake, not a dishonest contract, which can
+                // answer anything: that is for the review during the delay.
+                match PolicyClient::new(&env, &address).try_controller() {
+                    Ok(Ok(controller)) if controller == env.current_contract_address() => {}
+                    _ => return Err(Error::PolicyControllerMismatch),
+                }
+                storage.set(&DataKey::PolicyAddr, &address);
+            }
             Change::SetAttestation(address) => storage.set(&DataKey::AttestAddr, &address),
             Change::ApproveAsset(asset) => {
                 let mut assets = Self::approved_assets(env.clone());
