@@ -1,0 +1,102 @@
+# The checks every pull request has to pass.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Contract tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets -- -D warnings
+      # Every refusal, and the solvency invariant across seeded runs.
+      - run: cargo test --locked
+
+  fuzz:
+    name: Fuzz (contribute, distribute)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FUZZ_SECONDS: 120
+    defaults:
+      run:
+        working-directory: contracts/fuzz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts/fuzz
+      - run: cargo install cargo-fuzz --locked --version 0.13.2
+      - run: cargo fuzz run --sanitizer none contribute -- -max_total_time=$FUZZ_SECONDS -timeout=30
+      - run: cargo fuzz run --sanitizer none distribute -- -max_total_time=$FUZZ_SECONDS -timeout=30
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: fuzz-artifacts
+          path: contracts/fuzz/artifacts
+
+  reproducible:
+    name: Reproducible build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bash ops/scripts/build.sh
+      - run: node ops/scripts/check-no-upgrade.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasm
+          path: ops/out
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo install cargo-audit --locked
+      - run: cargo audit
+        working-directory: contracts
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: 8.30.1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The whole history, not only the tip.
+          fetch-depth: 0
+      - run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
+          ./gitleaks git --redact --verbose --exit-code 1 .
